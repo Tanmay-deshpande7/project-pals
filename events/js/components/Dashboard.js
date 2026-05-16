@@ -2,6 +2,51 @@ const Dashboard = ({ user, onLogout }) => {
     const [view, setView] = React.useState('list'); // 'list' | 'create'
     const [selectedEventId, setSelectedEventId] = React.useState(null);
 
+    React.useEffect(() => {
+        // Lazy Cleanup Script (Runs silently in background)
+        const performCleanup = async () => {
+            try {
+                const snapshot = await window.db.collection('events').get();
+                const now = new Date();
+                
+                snapshot.forEach(async (doc) => {
+                    const event = doc.data();
+                    if (!event.endDate) return; // Skip legacy events
+                    
+                    const endDateObj = new Date(event.endDate);
+                    
+                    const archiveDate = new Date(endDateObj);
+                    archiveDate.setDate(archiveDate.getDate() + 1);
+                    
+                    const deleteDate = new Date(endDateObj);
+                    deleteDate.setDate(deleteDate.getDate() + 30);
+
+                    if (now > deleteDate) {
+                        // Hard Delete: Delete all registrations first, then the event
+                        const regSnapshot = await window.db.collection('events').doc(doc.id).collection('registrations').get();
+                        const batch = window.db.batch();
+                        regSnapshot.forEach(regDoc => batch.delete(regDoc.ref));
+                        batch.delete(doc.ref);
+                        await batch.commit();
+                        console.log(`[Lifecycle] Hard deleted event: ${doc.id}`);
+                    } else if (now > archiveDate && !event.isArchived) {
+                        // Archive: Hide from public, delete heavy images to save space
+                        await window.db.collection('events').doc(doc.id).update({
+                            isArchived: true,
+                            bannerBase64: firebase.firestore.FieldValue.delete(),
+                            pfpBase64: firebase.firestore.FieldValue.delete()
+                        });
+                        console.log(`[Lifecycle] Archived event: ${doc.id}`);
+                    }
+                });
+            } catch (err) {
+                console.error("Lazy cleanup error:", err);
+            }
+        };
+        
+        performCleanup();
+    }, []);
+
     return (
         <div className="flex h-screen bg-[#0B0B15] text-white">
             {/* Sidebar */}
