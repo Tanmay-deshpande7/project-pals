@@ -1,0 +1,63 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": [
+    {
+      "target": "main",
+      "public": "public",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "headers": [
+        {
+          "source": "**/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "admin",
+      "public": "admin",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "events",
+      "public": "events",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ]
+}

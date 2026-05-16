@@ -1,0 +1,24 @@
+# ProjectPals - Changelog & History
+
+## February 17, 2026
+* **Fixing Chat Icons (Error Fixed)**: Resolved visual issues with icons in the chat interface. Fixed the broken placeholder for the close icon and added a missing send message icon to improve functionality and user experience.
+
+## February 14, 2026
+* **Polishing Chat Interface**: Enhanced the visual appeal of the chatting interface. Added user avatars, improved message bubble styling, and refined the message input area for a more engaging and modern aesthetic.
+
+## February 12, 2026
+* **Bug Fix - HTML Rule Error (Error Fixed)**: Debugged and resolved an "Unknown at rule" error in `public/index.html` (around line 55) that was preventing further development tasks.
+* **Integrating Generated Images**: Added generated images to specific UI areas that were previously marked in blue placeholders to make the UI look more complete.
+* **Adding Project Logos**: Modified the UI to incorporate project logos in the application.
+
+## February 10, 2026
+* **Firebase Database Setup**: Configured and validated Firestore security rules required for database operations.
+
+## February 6, 2026
+* **Rebuilding Static Firebase App**: Rebuilt ProjectPals with a purely static architecture, eliminating Node.js dependencies.
+  * Integrated Firebase for backend services.
+  * Implemented functional user authentication (login/signup workflows).
+  * Added the project creation feature.
+  * Connected the main dashboard to fetch and display real data.
+  * Maintained the visually stunning "Nebula" UI theme throughout these functional changes.
+* **Project Initialization & UI Selection**: Bootstrapped the ProjectPals web platform. Presented and selected the "Nebula" (Glassmorphism/Futuristic) design concept over "Horizon" and "Spark" themes. Initialized the project with this core aesthetic.

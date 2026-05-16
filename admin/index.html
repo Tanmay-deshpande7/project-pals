@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectPals | Admin</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    
+    <!-- Use the same tailwind build as public if no admin-specific css exists, or fallback to cdn for simple UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#8b5cf6',
+                        accent: '#ec4899',
+                        background: '#0f172a',
+                        surface: '#1e293b',
+                        divider: 'rgba(255,255,255,0.05)',
+                        'divider-strong': 'rgba(255,255,255,0.1)',
+                        main: '#f8fafc',
+                        muted: '#94a3b8'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM (Production Mode) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
+</head>
+<body class="bg-background text-main font-sans tracking-tight min-h-screen">
+    <div id="root"></div>
+
+    <!-- App Logic -->
+    <script src="js/firebase-config.js?v=20"></script>
+
+    <!-- Components -->
+    <script src="dist/js/components/Icons.js?v=21"></script>
+    <script src="dist/js/components/AdminAuth.js?v=22"></script>
+    <script src="dist/js/components/AdminDashboard.js?v=22"></script>
+
+    <!-- Main Entry -->
+    <script src="dist/js/app.js?v=20"></script>
+</body>
+</html>

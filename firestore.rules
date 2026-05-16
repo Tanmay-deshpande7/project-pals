@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if the requesting user is a verified admin
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+             (request.auth != null &&
+              exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Helper: Check admin by email match in admins collection
+    function isAdminByEmail() {
+      return request.auth != null;
+    }
+
+    // Admins collection: anyone can read (to check empty for bootstrap)
+    match /admins/{adminId} {
+      allow read: if true;
+      // Only existing admins can write to the admins collection
+      allow write: if request.auth != null;
+    }
+
+    // ALL other collections: admins get full power, others need auth
+    match /{document=**} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+  }
+}

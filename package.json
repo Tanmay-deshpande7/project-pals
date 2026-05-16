@@ -1,0 +1,20 @@
+{
+  "name": "projectpals",
+  "version": "1.0.0",
+  "description": "Project Pals",
+  "scripts": {
+    "build:adminjs": "babel admin/js --out-dir admin/dist/js",
+    "build:js": "babel public/js --out-dir public/dist/js",
+    "build:css": "tailwindcss -i public/style.css -o public/dist/style.css --minify",
+    "build:admincss": "tailwindcss -i public/style.css -o admin/dist/style.css --minify",
+    "build:eventsjs": "babel events/js --out-dir events/dist/js",
+    "build:eventscss": "tailwindcss -i public/style.css -o events/dist/style.css --minify",
+    "build": "npm run build:js && npm run build:css && npm run build:adminjs && npm run build:admincss && npm run build:eventsjs && npm run build:eventscss"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.23.9",
+    "@babel/core": "^7.23.9",
+    "@babel/preset-react": "^7.23.3",
+    "tailwindcss": "^3.4.1"
+  }
+}
