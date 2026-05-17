@@ -20,26 +20,35 @@ const sendNotification = async (uid, email, title, body, type = 'system', sendEm
             createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // 2. Dispatch to Make.com Webhook for Email
-        const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/3uy6lemvnh16c5bcrfixueckdyx89rol"; 
-        
+        // 2. Dispatch to EmailJS API
         if (sendEmail && email) {
+            const EMAILJS_URL = "https://api.emailjs.com/api/v1.0/email/send";
+            
             const payload = {
-                uid: uid,
-                email: email,
-                title: title,
-                body: body,
-                type: type
+                service_id: "service_5wncowy",
+                template_id: "template_yzu2scl",
+                user_id: "0j9iihpWE8FEyxJZt",
+                template_params: {
+                    to_email: email,
+                    title: title,
+                    body: body,
+                    type: type,
+                    // If you want to use the student's name in the email, you can map it in your EmailJS template as {{to_email}}
+                }
             };
 
-            // Non-blocking fetch (fire and forget)
-            fetch(MAKE_WEBHOOK_URL, {
+            // Non-blocking fetch to EmailJS API (fire and forget)
+            fetch(EMAILJS_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
-            }).catch(err => console.warn("Webhook dispatch failed:", err));
+            }).then(response => {
+                if (!response.ok) {
+                    console.warn("EmailJS dispatch failed with status:", response.status);
+                }
+            }).catch(err => console.warn("EmailJS network error:", err));
         }
     } catch (err) {
         // Silently fail — notifications are non-critical
