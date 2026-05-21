@@ -98,12 +98,48 @@ const Root = () => {
     window.currentTheme = theme;
 
     useEffect(() => {
-        const unsubscribe = window.auth.onAuthStateChanged((u) => {
-            setUser(u);
-            setAuthLoading(false);
-            if (u) setShowLanding(false); // Auto-exit landing on login
+        let presenceInterval = null;
+
+        const unsubscribe = window.auth.onAuthStateChanged(async (u) => {
+            if (presenceInterval) {
+                clearInterval(presenceInterval);
+                presenceInterval = null;
+            }
+
+            if (u) {
+                setAuthLoading(true);
+                try {
+                    await window.initializeUserShard(u.uid);
+                    
+                    // Presence tracking
+                    const userRef = window.db.collection('users').doc(u.uid);
+                    const updatePresence = () => {
+                        userRef.set({
+                            isOnline: true,
+                            lastSeen: new Date(),
+                            displayName: u.displayName || 'User',
+                            email: u.email
+                        }, { merge: true }).catch(err => console.warn("Presence update failed:", err));
+                    };
+                    
+                    updatePresence();
+                    presenceInterval = setInterval(updatePresence, 60000);
+                } catch (e) {
+                    console.error("Error during authentication bootstrapper:", e);
+                }
+                setUser(u);
+                setAuthLoading(false);
+                setShowLanding(false); // Auto-exit landing on login
+            } else {
+                setUser(null);
+                setAuthLoading(false);
+            }
         });
-        return () => unsubscribe();
+
+        return () => {
+            unsubscribe();
+            if (presenceInterval) clearInterval(presenceInterval);
+        };
     }, []);
 
     if (authLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-muted/70">Loading...</div>;

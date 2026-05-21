@@ -4,9 +4,20 @@ const App = () => {
 
     React.useEffect(() => {
         if (window.lucide) window.lucide.createIcons();
-        const unsubscribe = window.auth.onAuthStateChanged(u => {
-            setUser(u);
-            setLoading(false);
+        const unsubscribe = window.auth.onAuthStateChanged(async u => {
+            if (u) {
+                setLoading(true);
+                try {
+                    await window.initializeUserShard(u.uid);
+                } catch (e) {
+                    console.error("Error bootstrapping user shard in events portal:", e);
+                }
+                setUser(u);
+                setLoading(false);
+            } else {
+                setUser(null);
+                setLoading(false);
+            }
         });
         return () => unsubscribe();
     }, []);

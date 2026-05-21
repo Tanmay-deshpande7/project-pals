@@ -33,11 +33,42 @@ const AdminDashboard = ({ user, onLogout }) => {
             setUsersList(data);
         });
 
-        // Fetch all projects
-        const unsubProjects = window.db.collection('projects').onSnapshot(snap => {
-            setTotalProjects(snap.size);
-            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setProjectsList(data);
+        // Fetch all projects from all active shards in parallel
+        const shardProjectsData = {};
+        const shardUnsubs = [];
+
+        Object.entries(window.shardDbs).forEach(([shardName, shardDb]) => {
+            try {
+                const unsub = shardDb.collection('projects').onSnapshot(snap => {
+                    const shardProjectsList = snap.docs.map(doc => ({
+                        id: doc.id,
+                        shardId: shardName,
+                        ...doc.data()
+                    }));
+                    shardProjectsData[shardName] = shardProjectsList;
+
+                    // Combine all projects from all shards
+                    const allProjects = [];
+                    Object.values(shardProjectsData).forEach(projects => {
+                        allProjects.push(...projects);
+                    });
+
+                    // Sort by creation date (newest first)
+                    allProjects.sort((a, b) => {
+                        const timeA = a.createdAt?.seconds || a.createdAt?.getTime?.() || 0;
+                        const timeB = b.createdAt?.seconds || b.createdAt?.getTime?.() || 0;
+                        return timeB - timeA;
+                    });
+
+                    setProjectsList(allProjects);
+                    setTotalProjects(allProjects.length);
+                }, err => {
+                    console.error(`Failed to watch projects on ${shardName}:`, err);
+                });
+                shardUnsubs.push(unsub);
+            } catch (err) {
+                console.error(`Error setting up listener on ${shardName}:`, err);
+            }
         });
 
         // Fetch all admins
@@ -46,7 +77,11 @@ const AdminDashboard = ({ user, onLogout }) => {
             setAdminsList(data);
         });
 
-        return () => { unsubUsers(); unsubProjects(); unsubAdmins(); };
+        return () => {
+            unsubUsers();
+            shardUnsubs.forEach(unsub => unsub());
+            unsubAdmins();
+        };
     }, []);
 
     const handleGrantAdmin = async (e) => {
@@ -90,23 +125,28 @@ const AdminDashboard = ({ user, onLogout }) => {
         if (!window.confirm("Are you sure you want to mercilessly destroy this active project and all its chats/applications?")) return;
         setActionError('');
         try {
-            const batch = window.db.batch();
+            // Find which shard this project lives in
+            const targetProject = projectsList.find(p => p.id === projectId);
+            const shardId = targetProject ? targetProject.shardId : 'master';
+            const targetDb = window.shardDbs[shardId] || window.shardDbs.master;
+
+            const batch = targetDb.batch();
 
             // 1. Delete project document
-            batch.delete(window.db.collection('projects').doc(projectId));
+            batch.delete(targetDb.collection('projects').doc(projectId));
 
             // 2. Delete the team chat thread
-            batch.delete(window.db.collection('threads').doc('team_' + projectId));
+            batch.delete(targetDb.collection('threads').doc('team_' + projectId));
 
             await batch.commit();
 
             // 3. Delete all applications for this project (can't batch query+delete easily, so run separately)
-            const appsSnap = await window.db.collection('applications').where('projectId', '==', projectId).get();
+            const appsSnap = await targetDb.collection('applications').where('projectId', '==', projectId).get();
             const appDeletes = appsSnap.docs.map(doc => doc.ref.delete());
             await Promise.all(appDeletes);
 
             // 4. Delete all messages inside the team thread
-            const messagesSnap = await window.db.collection('threads').doc('team_' + projectId).collection('messages').get();
+            const messagesSnap = await targetDb.collection('threads').doc('team_' + projectId).collection('messages').get();
             const msgDeletes = messagesSnap.docs.map(doc => doc.ref.delete());
             await Promise.all(msgDeletes);
 
