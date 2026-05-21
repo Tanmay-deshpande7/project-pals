@@ -5,9 +5,7 @@ service cloud.firestore {
     // Helper: Check if the requesting user is a verified admin
     function isAdmin() {
       return request.auth != null &&
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-             (request.auth != null &&
-              exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // Helper: Check admin by email match in admins collection

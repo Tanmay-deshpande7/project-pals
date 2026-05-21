@@ -9,7 +9,8 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "js/**"
       ],
       "headers": [
         {
@@ -35,7 +36,8 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "js/**"
       ],
       "rewrites": [
         {
@@ -50,7 +52,8 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "js/**"
       ],
       "rewrites": [
         {
