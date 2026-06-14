@@ -24,15 +24,21 @@ const AdminAuth = () => {
         const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
             if (user) {
                 try {
-                    // Check if they are listed in the admins database BY EMAIL
-                    const adminDoc = await window.db.collection('admins').where('email', '==', user.email).limit(1).get();
-                    if (!adminDoc.empty) {
+                    // 1. Check by UID directly first (most robust)
+                    const uidDoc = await window.db.collection('admins').doc(user.uid).get();
+                    if (uidDoc.exists) {
                         setAuthStatus('admin');
                     } else {
-                        // User exists but has no admin privileges. Evict them!
-                        await window.auth.signOut();
-                        setError('ACCESS DENIED: You do not have Administrative Privileges on this layer.');
-                        setAuthStatus('rejected');
+                        // 2. Fallback: Check if they are listed in the admins database BY EMAIL
+                        const adminDoc = await window.db.collection('admins').where('email', '==', user.email).limit(1).get();
+                        if (!adminDoc.empty) {
+                            setAuthStatus('admin');
+                        } else {
+                            // User exists but has no admin privileges. Evict them!
+                            await window.auth.signOut();
+                            setError('ACCESS DENIED: You do not have Administrative Privileges on this layer.');
+                            setAuthStatus('rejected');
+                        }
                     }
                 } catch(err) {
                     console.error(err);
@@ -54,8 +60,11 @@ const AdminAuth = () => {
         setLoading(true);
         try {
             // Check if this specific email is currently whitelisted as an active Admin
-            const snap = await window.db.collection('admins').where('email', '==', email.trim()).limit(1).get();
-            if (snap.empty) {
+            // We fetch all admins and check case-insensitively to prevent autofill lockout
+            const snap = await window.db.collection('admins').get();
+            const isAdmin = snap.docs.some(doc => doc.data().email && doc.data().email.toLowerCase() === email.trim().toLowerCase());
+            
+            if (!isAdmin) {
                 setError('ACCESS DENIED: This email address has not been explicitly authorized by Root.');
                 setLoading(false);
                 return;
@@ -75,14 +84,14 @@ const AdminAuth = () => {
         setLoading(true);
         try {
             // Attempt standard login first
-            await window.auth.signInWithEmailAndPassword(email, password);
+            await window.auth.signInWithEmailAndPassword(email.trim(), password);
         } catch (err) {
             // In modern Firebase, invalid-credential means EITHER wrong password OR User doesn't exist yet!
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
                 try {
                     // Because they passed Step 1, we aggressively KNOW they are allowed here.
                     // If they don't have an auth shell yet, simply create it for them silently right now using the password they just typed.
-                    await window.auth.createUserWithEmailAndPassword(email, password);
+                    await window.auth.createUserWithEmailAndPassword(email.trim(), password);
                     // The auth listener will intercept and grant power
                 } catch(creationErr) {
                     // If email already in use thrown here, it means they DO exist but just typed wrong password
@@ -107,7 +116,7 @@ const AdminAuth = () => {
         setLoading(true);
         try {
             // First ever root admin setup
-            const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
+            const userCredential = await window.auth.createUserWithEmailAndPassword(email.trim(), password);
             const user = userCredential.user;
             
             // Register them in the admins database IMMEDIATELY

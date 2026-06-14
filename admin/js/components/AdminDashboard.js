@@ -22,9 +22,16 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     React.useEffect(() => {
         // Check if current user is root
-        window.db.collection('admins').where('email', '==', user.email).limit(1).get().then(snap => {
-            if (!snap.empty && snap.docs[0].data().role === 'root') setIsRootAdmin(true);
-        });
+        window.db.collection('admins').doc(user.uid).get().then(snap => {
+            if (snap.exists && snap.data().role === 'root') {
+                setIsRootAdmin(true);
+            } else {
+                // Fallback to email match
+                window.db.collection('admins').where('email', '==', user.email).limit(1).get().then(qSnap => {
+                    if (!qSnap.empty && qSnap.docs[0].data().role === 'root') setIsRootAdmin(true);
+                });
+            }
+        }).catch(err => console.error("Error checking root status:", err));
 
         // Fetch all generic users
         const unsubUsers = window.db.collection('users').onSnapshot(snap => {
