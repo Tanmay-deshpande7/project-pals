@@ -4,14 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ProjectPals | Collaborate on Future Tech</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="ProjectPals | Collaborate on Future Tech" />
     <meta name="description" content="ProjectPals is the premier platform to connect, collaborate, and build next-generation tech projects and developer networks." />
-    <meta name="keywords" content="ProjectPals, developer collaboration, tech projects, open source, developer network, team building" />
-    <meta property="og:title" content="ProjectPals | Collaborate on Future Tech" />
-    <meta property="og:description" content="Connect, collaborate, and build next-generation tech projects." />
+    <meta name="keywords" content="ProjectPals, developer collaboration, tech projects, open source, developer network, team building, hackathons" />
+    <meta name="author" content="ProjectPals" />
+
+    <!-- Google Crawl & Indexing Directives -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <link rel="canonical" href="https://projectpals-66223.firebaseapp.com/" />
+    
+    <!-- Open Graph / Facebook / LinkedIn -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://projectpals-66223.web.app/" />
+    <meta property="og:url" content="https://projectpals-66223.firebaseapp.com/" />
+    <meta property="og:title" content="ProjectPals | Collaborate on Future Tech" />
+    <meta property="og:description" content="Connect, collaborate, and build next-generation tech projects with developers worldwide." />
+    <meta property="og:image" content="https://projectpals-66223.firebaseapp.com/favicon.png" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://projectpals-66223.firebaseapp.com/" />
+    <meta name="twitter:title" content="ProjectPals | Collaborate on Future Tech" />
+    <meta name="twitter:description" content="Connect, collaborate, and build next-generation tech projects with developers worldwide." />
+    <meta name="twitter:image" content="https://projectpals-66223.firebaseapp.com/favicon.png" />
+
     <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="canonical" href="https://projectpals-66223.web.app/" />
+
+    <!-- Schema.org JSON-LD Structured Data for Google Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "ProjectPals",
+      "url": "https://projectpals-66223.firebaseapp.com/",
+      "description": "ProjectPals is the premier platform to connect, collaborate, and build next-generation tech projects and developer networks.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "All",
+      "author": {
+        "@type": "Organization",
+        "name": "ProjectPals"
+      }
+    }
+    </script>
     
     <!-- Compiled Tailwind CSS -->
     <link rel="stylesheet" href="dist/style.css?v=17">
@@ -31,8 +67,21 @@
     <!-- Lucide Icons -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-background text-main font-sans">
+    <!-- Root Container with Fallback Markup for Google Crawlers -->
+    <div id="root">
+      <div style="padding: 3rem 1.5rem; text-align: center; font-family: sans-serif; color: #f8fafc; background: #0f172a; min-height: 100vh;">
+        <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem;">ProjectPals | Collaborate on Future Tech</h1>
+        <p style="color: #94a3b8; max-width: 600px; margin: 0 auto 1.5rem;">Connect, collaborate, and build next-generation tech projects with developers worldwide.</p>
+      </div>
+    </div>
+    
+    <noscript>
+      <div style="padding: 2rem; text-align: center; color: #ef4444; background: #0f172a;">
+        <h2>JavaScript Required</h2>
+        <p>JavaScript is required to run ProjectPals. Please enable JavaScript in your browser settings.</p>
+      </div>
+    </noscript>
 
     <!-- App Logic -->
     <script src="dist/js/firebase-config.js?v=17"></script>
