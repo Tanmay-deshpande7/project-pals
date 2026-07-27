@@ -10,6 +10,7 @@ const AdminAuth = () => {
 
     // Pre-flight check: is the admins collection totally empty?
     React.useEffect(() => {
+        if (!window.db) return;
         window.db.collection('admins').limit(1).get().then(snap => {
             setAdminDbEmpty(snap.empty);
         }).catch(err => {
@@ -21,17 +22,33 @@ const AdminAuth = () => {
 
     // Firebase Auth State Listener
     React.useEffect(() => {
+        if (!window.auth) return;
         const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
             if (user) {
                 try {
+                    const userEmail = (user.email || '').toLowerCase().trim();
                     // 1. Check by UID directly first (most robust)
                     const uidDoc = await window.db.collection('admins').doc(user.uid).get();
                     if (uidDoc.exists) {
                         setAuthStatus('admin');
                     } else {
-                        // 2. Fallback: Check if they are listed in the admins database BY EMAIL
-                        const adminDoc = await window.db.collection('admins').where('email', '==', user.email).limit(1).get();
-                        if (!adminDoc.empty) {
+                        // 2. Fallback: Check if they are listed in the admins collection BY EMAIL
+                        const adminSnap = await window.db.collection('admins').get();
+                        const matchingDoc = adminSnap.docs.find(doc => {
+                            const data = doc.data();
+                            return (data.email && data.email.toLowerCase().trim() === userEmail) ||
+                                   (doc.id && doc.id.toLowerCase().trim() === userEmail);
+                        });
+
+                        if (matchingDoc) {
+                            const existingData = matchingDoc.data();
+                            // Write doc(user.uid) so Firestore security rules recognize this UID as admin!
+                            await window.db.collection('admins').doc(user.uid).set({
+                                email: user.email,
+                                role: existingData.role || 'admin',
+                                addedAt: existingData.addedAt || new Date()
+                            }, { merge: true });
+
                             setAuthStatus('admin');
                         } else {
                             // User exists but has no admin privileges. Evict them!
@@ -41,10 +58,10 @@ const AdminAuth = () => {
                         }
                     }
                 } catch(err) {
-                    console.error(err);
+                    console.error("Auth validation error:", err);
                     await window.auth.signOut();
                     setAuthStatus('rejected');
-                    setError('Authentication failure while validating root privileges.');
+                    setError('Authentication failure while validating root privileges: ' + err.message);
                 }
             } else {
                 setAuthStatus('logged_out');
@@ -59,10 +76,14 @@ const AdminAuth = () => {
         setError('');
         setLoading(true);
         try {
+            const targetEmail = email.trim().toLowerCase();
             // Check if this specific email is currently whitelisted as an active Admin
-            // We fetch all admins and check case-insensitively to prevent autofill lockout
             const snap = await window.db.collection('admins').get();
-            const isAdmin = snap.docs.some(doc => doc.data().email && doc.data().email.toLowerCase() === email.trim().toLowerCase());
+            const isAdmin = snap.docs.some(doc => {
+                const data = doc.data();
+                return (data.email && data.email.toLowerCase().trim() === targetEmail) ||
+                       (doc.id && doc.id.toLowerCase().trim() === targetEmail);
+            });
             
             if (!isAdmin) {
                 setError('ACCESS DENIED: This email address has not been explicitly authorized by Root.');
@@ -86,15 +107,12 @@ const AdminAuth = () => {
             // Attempt standard login first
             await window.auth.signInWithEmailAndPassword(email.trim(), password);
         } catch (err) {
-            // In modern Firebase, invalid-credential means EITHER wrong password OR User doesn't exist yet!
+            // In modern Firebase, invalid-credential or user-not-found means User doesn't exist yet or wrong pass
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
                 try {
-                    // Because they passed Step 1, we aggressively KNOW they are allowed here.
-                    // If they don't have an auth shell yet, simply create it for them silently right now using the password they just typed.
+                    // Create auth account if first time logging in
                     await window.auth.createUserWithEmailAndPassword(email.trim(), password);
-                    // The auth listener will intercept and grant power
                 } catch(creationErr) {
-                    // If email already in use thrown here, it means they DO exist but just typed wrong password
                     if (creationErr.code === 'auth/email-already-in-use') {
                         setError('Incorrect credentials. Access denied.');
                     } else {
@@ -102,6 +120,9 @@ const AdminAuth = () => {
                     }
                     setLoading(false);
                 }
+            } else if (err.code === 'auth/wrong-password') {
+                setError('Incorrect credentials. Access denied.');
+                setLoading(false);
             } else {
                 setError(err.message);
                 setLoading(false);
@@ -125,10 +146,23 @@ const AdminAuth = () => {
                 role: 'root',
                 addedAt: new Date()
             });
-            // The auth listener handles routing to dashboard
         } catch (err) {
-            setError(err.message);
-            setLoading(false);
+            if (err.code === 'auth/email-already-in-use') {
+                try {
+                    const cred = await window.auth.signInWithEmailAndPassword(email.trim(), password);
+                    await window.db.collection('admins').doc(cred.user.uid).set({
+                        email: cred.user.email,
+                        role: 'root',
+                        addedAt: new Date()
+                    });
+                } catch(signInErr) {
+                    setError(signInErr.message);
+                    setLoading(false);
+                }
+            } else {
+                setError(err.message);
+                setLoading(false);
+            }
         }
     };
 
