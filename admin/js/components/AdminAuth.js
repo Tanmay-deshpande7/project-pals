@@ -187,9 +187,27 @@ const AdminAuth = () => {
 
                     {(authStep === 2 || adminDbEmpty) && (
                         <div>
-                            <label className="block text-sm font-medium text-muted mb-1 uppercase tracking-wider text-xs">
-                                {adminDbEmpty ? 'Secure Password Configuration' : 'Clearance Code / Set New Password'}
-                            </label>
+                            <div className="flex justify-between items-end mb-1">
+                                <label className="block text-sm font-medium text-muted uppercase tracking-wider text-xs">
+                                    {adminDbEmpty ? 'Secure Password Configuration' : 'Clearance Code / Set New Password'}
+                                </label>
+                                {!adminDbEmpty && authStep === 2 && (
+                                    <button 
+                                        type="button" 
+                                        onClick={async () => {
+                                            try {
+                                                await window.auth.sendPasswordResetEmail(email.trim());
+                                                alert("Password reset email sent! Please check your inbox.");
+                                            } catch(err) {
+                                                alert("Error sending reset email: " + err.message);
+                                            }
+                                        }} 
+                                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                    >
+                                        Forgot Password?
+                                    </button>
+                                )}
+                            </div>
                             <p className="text-xs text-muted/50 mb-2 leading-tight">
                                 {adminDbEmpty ? '' : "If this is your first time connecting as an Administrator, the password you type below will be permanently bound to your account."}
                             </p>
