@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://projectpals-66223.web.app/sitemap.xml
 Sitemap: https://projectpals-66223.firebaseapp.com/sitemap.xml
