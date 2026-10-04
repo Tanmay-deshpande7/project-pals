@@ -1,273 +1,52 @@
 const AdminAuth = () => {
     const [loading, setLoading] = React.useState(true);
-    const [authStatus, setAuthStatus] = React.useState('loading'); // loading, admin, rejected, logged_out
-    const [adminDbEmpty, setAdminDbEmpty] = React.useState(false);
-    const [authStep, setAuthStep] = React.useState(1); // Step 1: Email, Step 2: Password
-    
+    const [authorized, setAuthorized] = React.useState(false);
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
+    const [needsVerification, setNeedsVerification] = React.useState(false);
 
-    // Pre-flight check: is the admins collection totally empty?
-    React.useEffect(() => {
-        if (!window.db) return;
-        window.db.collection('admins').limit(1).get().then(snap => {
-            setAdminDbEmpty(snap.empty);
-        }).catch(err => {
-            console.error("Error checking root admins:", err);
-            // If permissions fail, assume it's not empty and enforce strict auth
-            setAdminDbEmpty(false); 
-        });
-    }, []);
-
-    // Firebase Auth State Listener
-    React.useEffect(() => {
-        if (!window.auth) return;
-        const unsubscribe = window.auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                try {
-                    const userEmail = (user.email || '').toLowerCase().trim();
-                    // 1. Check by UID directly first (most robust)
-                    const uidDoc = await window.db.collection('admins').doc(user.uid).get();
-                    if (uidDoc.exists) {
-                        setAuthStatus('admin');
-                    } else {
-                        // 2. Fallback: Check if they are listed in the admins collection BY EMAIL
-                        const adminSnap = await window.db.collection('admins').get();
-                        const matchingDoc = adminSnap.docs.find(doc => {
-                            const data = doc.data();
-                            return (data.email && data.email.toLowerCase().trim() === userEmail) ||
-                                   (doc.id && doc.id.toLowerCase().trim() === userEmail);
-                        });
-
-                        if (matchingDoc) {
-                            const existingData = matchingDoc.data();
-                            // Write doc(user.uid) so Firestore security rules recognize this UID as admin!
-                            await window.db.collection('admins').doc(user.uid).set({
-                                email: user.email,
-                                role: existingData.role || 'admin',
-                                addedAt: existingData.addedAt || new Date()
-                            }, { merge: true });
-
-                            setAuthStatus('admin');
-                        } else {
-                            // User exists but has no admin privileges. Evict them!
-                            await window.auth.signOut();
-                            setError('ACCESS DENIED: You do not have Administrative Privileges on this layer.');
-                            setAuthStatus('rejected');
-                        }
-                    }
-                } catch(err) {
-                    console.error("Auth validation error:", err);
-                    await window.auth.signOut();
-                    setAuthStatus('rejected');
-                    setError('Authentication failure while validating root privileges: ' + err.message);
-                }
-            } else {
-                setAuthStatus('logged_out');
-            }
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    const handleLoginStep1 = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
-        try {
-            const targetEmail = email.trim().toLowerCase();
-            // Check if this specific email is currently whitelisted as an active Admin
-            const snap = await window.db.collection('admins').get();
-            const isAdmin = snap.docs.some(doc => {
-                const data = doc.data();
-                return (data.email && data.email.toLowerCase().trim() === targetEmail) ||
-                       (doc.id && doc.id.toLowerCase().trim() === targetEmail);
-            });
-            
-            if (!isAdmin) {
-                setError('ACCESS DENIED: This email address has not been explicitly authorized by Root.');
-                setLoading(false);
-                return;
-            }
-            // Clearance check passed! Move to password step.
-            setAuthStep(2);
-            setLoading(false);
-        } catch (err) {
-            setError(err.message);
-            setLoading(false);
+    React.useEffect(() => window.auth.onAuthStateChanged(async user => {
+        setAuthorized(false); setNeedsVerification(false); setLoading(true);
+        if (user) {
+            try {
+                // Only the backend can resolve the verified UID's current privileges.
+                const access = await window.initializeUserShard(user.uid);
+                if (window.auth.currentUser?.uid !== user.uid) return;
+                setAuthorized(access.admin);
+                setNeedsVerification(!access.emailVerified);
+                if (!access.admin) setError(access.emailVerified ? 'This account has no administrator access. Contact the project owner.' : 'Verify your email, then sign in again.');
+            } catch (err) { if (window.auth.currentUser?.uid !== user.uid) return; setError(err.message); }
         }
-    };
+        setLoading(false);
+    }), []);
 
-    const handleLoginStep2 = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+    const login = async e => {
+        e.preventDefault(); setError(''); setLoading(true);
         try {
-            // Attempt standard login first
+            // Failed login never creates an account or claims an email invitation.
             await window.auth.signInWithEmailAndPassword(email.trim(), password);
-        } catch (err) {
-            // In modern Firebase, invalid-credential or user-not-found means User doesn't exist yet or wrong pass
-            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
-                try {
-                    // Create auth account if first time logging in
-                    await window.auth.createUserWithEmailAndPassword(email.trim(), password);
-                } catch(creationErr) {
-                    if (creationErr.code === 'auth/email-already-in-use') {
-                        setError('Incorrect credentials. Access denied.');
-                    } else {
-                        setError(creationErr.message);
-                    }
-                    setLoading(false);
-                }
-            } else if (err.code === 'auth/wrong-password') {
-                setError('Incorrect credentials. Access denied.');
-                setLoading(false);
-            } else {
-                setError(err.message);
-                setLoading(false);
-            }
-        }
+        } catch (err) { setError('Unable to sign in. Check your existing account credentials.'); setLoading(false); }
     };
-
-    const handleInitialRootSignup = async (e) => {
-        e.preventDefault();
-        if (!adminDbEmpty) return; // Failsafe
-        setError('');
-        setLoading(true);
-        try {
-            // First ever root admin setup
-            const userCredential = await window.auth.createUserWithEmailAndPassword(email.trim(), password);
-            const user = userCredential.user;
-            
-            // Register them in the admins database IMMEDIATELY
-            await window.db.collection('admins').doc(user.uid).set({
-                email: user.email,
-                role: 'root',
-                addedAt: new Date()
-            });
-        } catch (err) {
-            if (err.code === 'auth/email-already-in-use') {
-                try {
-                    const cred = await window.auth.signInWithEmailAndPassword(email.trim(), password);
-                    await window.db.collection('admins').doc(cred.user.uid).set({
-                        email: cred.user.email,
-                        role: 'root',
-                        addedAt: new Date()
-                    });
-                } catch(signInErr) {
-                    setError(signInErr.message);
-                    setLoading(false);
-                }
-            } else {
-                setError(err.message);
-                setLoading(false);
-            }
-        }
-    };
-
-    if (loading && authStatus === 'loading') {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <window.Icon name="loader-2" size={48} className="text-primary animate-spin mb-4" />
-                <p className="text-muted tracking-widest uppercase text-sm font-bold">Verifying Layer Security</p>
-            </div>
-        );
-    }
-
-    if (authStatus === 'admin') {
-        return <window.AdminDashboard user={window.auth.currentUser} onLogout={() => { window.auth.signOut(); window.location.reload(); }} />;
-    }
-
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-background text-main">Checking administrator access...</div>;
+    if (authorized) return <window.AdminDashboard user={window.auth.currentUser} onLogout={() => window.auth.signOut()} />;
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-surface/60 backdrop-blur-xl border border-divider-strong p-10 rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
-                
-                <h2 className="text-3xl font-bold mb-2 text-main text-center">
-                    ProjectPals <span className="text-red-400">Administrative Base</span>
-                </h2>
-                <p className="text-center text-muted mb-8 text-sm">
-                    {adminDbEmpty 
-                        ? "WARNING: No existing root administrators detected. The first user to authenticate will be permanently locked as ROOT." 
-                        : "Encrypted connection required."}
-                </p>
-
-                {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl mb-6 text-sm font-mono break-words">
-                        [ERROR] {error}
-                    </div>
-                )}
-
-                <form onSubmit={adminDbEmpty ? handleInitialRootSignup : (authStep === 1 ? handleLoginStep1 : handleLoginStep2)} className="space-y-4">
-                    {authStep === 1 || adminDbEmpty ? (
-                        <div>
-                            <label className="block text-sm font-medium text-muted mb-1 uppercase tracking-wider text-xs">Auth Email</label>
-                            <input 
-                                type="email" 
-                                required 
-                                className="w-full bg-background/50 border border-divider-strong rounded-xl p-3 text-main focus:border-red-400 focus:outline-none transition-all placeholder:text-muted/30"
-                                placeholder="agent@projectpals.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-                    ) : (
-                        <div className="flex justify-between items-center bg-background/50 border border-divider p-3 rounded-xl">
-                            <span className="text-muted font-mono">{email}</span>
-                            <button type="button" onClick={() => setAuthStep(1)} className="text-xs text-red-400 font-bold uppercase hover:underline">Change</button>
-                        </div>
-                    )}
-
-                    {(authStep === 2 || adminDbEmpty) && (
-                        <div>
-                            <div className="flex justify-between items-end mb-1">
-                                <label className="block text-sm font-medium text-muted uppercase tracking-wider text-xs">
-                                    {adminDbEmpty ? 'Secure Password Configuration' : 'Clearance Code / Set New Password'}
-                                </label>
-                                {!adminDbEmpty && authStep === 2 && (
-                                    <button 
-                                        type="button" 
-                                        onClick={async () => {
-                                            try {
-                                                await window.auth.sendPasswordResetEmail(email.trim());
-                                                alert("Password reset email sent! Please check your inbox.");
-                                            } catch(err) {
-                                                alert("Error sending reset email: " + err.message);
-                                            }
-                                        }} 
-                                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                                    >
-                                        Forgot Password?
-                                    </button>
-                                )}
-                            </div>
-                            <p className="text-xs text-muted/50 mb-2 leading-tight">
-                                {adminDbEmpty ? '' : "If this is your first time connecting as an Administrator, the password you type below will be permanently bound to your account."}
-                            </p>
-                            <input 
-                                type="password" 
-                                required 
-                                minLength="6"
-                                className="w-full bg-background/50 border border-divider-strong rounded-xl p-3 text-main focus:border-red-400 focus:outline-none transition-all placeholder:text-muted/30"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                        </div>
-                    )}
-
-                    <button 
-                        type="submit" 
-                        disabled={loading}
-                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-red-500/20 mt-4 disabled:opacity-50"
-                    >
-                        {loading ? 'Authenticating...' : (adminDbEmpty ? 'INITIALIZE ROOT ADMIN' : (authStep === 1 ? 'VERIFY CLEARANCE' : 'INITIATE OVERRIDE SEQUENCE'))}
-                    </button>
-                </form>
+        <div className="min-h-screen flex items-center justify-center bg-background text-main p-6">
+            <div className="w-full max-w-md bg-surface border border-divider-strong rounded-2xl p-8">
+                <h1 className="text-2xl font-bold mb-4">Administrator sign in</h1>
+                <p className="text-muted text-sm mb-6">Use an existing account authorized by the project owner.</p>
+                {error && <p role="alert" className="text-red-400 mb-4">{error}</p>}
+                {!window.auth.currentUser ? <form onSubmit={login} className="space-y-4">
+                    <label className="block">Email<input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} className="block w-full bg-background border border-divider-strong p-3 rounded-lg" /></label>
+                    <label className="block">Password<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} className="block w-full bg-background border border-divider-strong p-3 rounded-lg" /></label>
+                    <button type="submit" className="w-full bg-primary p-3 rounded-lg font-bold">Sign in</button>
+                    <button type="button" onClick={async () => { try { await window.auth.sendPasswordResetEmail(email.trim()); setError('If an account exists, check its inbox for recovery instructions.'); } catch (err) { setError('Enter your account email to request a reset.'); } }} className="text-sm text-muted">Forgot password?</button>
+                </form> : <div className="space-y-3">
+                    {needsVerification && <button onClick={async () => { try { await window.auth.currentUser.sendEmailVerification(); setError('Verification email sent. Follow the link, then sign out and sign in again.'); } catch (err) { setError(err.message); } }} className="w-full bg-primary p-3 rounded-lg">Send verification email</button>}
+                    <button onClick={() => window.auth.signOut()} className="w-full border border-divider-strong p-3 rounded-lg">Sign out</button>
+                </div>}
             </div>
         </div>
     );
 };
-
 window.AdminAuth = AdminAuth;

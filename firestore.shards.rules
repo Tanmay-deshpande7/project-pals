@@ -1,16 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Shared Shard Database Rules
-    // Shards do not handle authentication (Auth is on Master)
-    // Client proxy handles distribution, these collections must be accessible
-    
-    match /projects/{document=**} { allow read, write: if true; }
-    match /events/{document=**} { allow read, write: if true; }
-    match /applications/{document=**} { allow read, write: if true; }
-    match /threads/{document=**} { allow read, write: if true; }
-    match /messages/{document=**} { allow read, write: if true; }
-    match /requests/{document=**} { allow read, write: if true; }
+    // The gateway uses the Admin SDK with IAM. Direct browser access must stay denied,
+    // including admins, private chat, registrations, and every recursive subcollection.
+    match /{document=**} { allow read, write: if false; }
   }
 }

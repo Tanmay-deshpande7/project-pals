@@ -21,22 +21,13 @@ const AdminDashboard = ({ user, onLogout }) => {
     }, [view, usersList, projectsList, adminsList]);
 
     React.useEffect(() => {
-        // Check if current user is root
-        window.db.collection('admins').doc(user.uid).get().then(snap => {
-            if (snap.exists && snap.data().role === 'root') {
-                setIsRootAdmin(true);
-            } else {
-                // Fallback to email match
-                window.db.collection('admins').where('email', '==', user.email).limit(1).get().then(qSnap => {
-                    if (!qSnap.empty && qSnap.docs[0].data().role === 'root') setIsRootAdmin(true);
-                });
-            }
-        }).catch(err => console.error("Error checking root status:", err));
+        // Root authority is resolved by the server, never by an email fallback.
+        window.getPortalAccess().then(access => setIsRootAdmin(access.root)).catch(err => setActionError(err.message));
 
         // Fetch all generic users
         const unsubUsers = window.db.collection('users').onSnapshot(snap => {
             setTotalUsers(snap.size);
-            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             setUsersList(data);
         });
 
@@ -80,7 +71,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
         // Fetch all admins
         const unsubAdmins = window.db.collection('admins').onSnapshot(snap => {
-            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             setAdminsList(data);
         });
 
@@ -95,12 +86,8 @@ const AdminDashboard = ({ user, onLogout }) => {
         e.preventDefault();
         if (!newAdminEmail) return;
         try {
-            await window.db.collection('admins').add({
-                email: newAdminEmail,
-                role: 'admin',
-                addedAt: new Date(),
-                addedBy: user.email
-            });
+            // Resolve an existing verified account and grant its UID on the server.
+            await window.secureApi({kind: 'manageAdmin', operation: 'grant', email: newAdminEmail});
             setNewAdminEmail('');
             alert('Admin cleared! They can now log in securely through the portal.');
         } catch(err) {
@@ -111,17 +98,18 @@ const AdminDashboard = ({ user, onLogout }) => {
     const handleRevokeAdmin = async (adminDocId) => {
         if (!window.confirm("CRITICAL: Strip operational privileges from this admin?")) return;
         try {
-            await window.db.collection('admins').doc(adminDocId).delete();
+            await window.secureApi({kind: 'manageAdmin', operation: 'revoke', uid: adminDocId});
         } catch(err) {
             alert(err.message);
         }
     };
 
     const handleBanUser = async (targetUid) => {
-        if (!window.confirm("Are you sure you want to completely erase this user from the main database?")) return;
+        if (!window.confirm("Disable this account and revoke its sessions?")) return;
         setActionError('');
         try {
-            await window.db.collection('users').doc(targetUid).delete();
+            // Deleting a profile is not a ban; invalidate the actual Auth identity.
+            await window.secureApi({kind: 'banUser', uid: targetUid});
         } catch(err) {
             console.error('Ban user error:', err);
             setActionError('Delete failed: ' + err.message);
@@ -137,25 +125,8 @@ const AdminDashboard = ({ user, onLogout }) => {
             const shardId = targetProject ? targetProject.shardId : 'master';
             const targetDb = window.shardDbs[shardId] || window.shardDbs.master;
 
-            const batch = targetDb.batch();
-
-            // 1. Delete project document
-            batch.delete(targetDb.collection('projects').doc(projectId));
-
-            // 2. Delete the team chat thread
-            batch.delete(targetDb.collection('threads').doc('team_' + projectId));
-
-            await batch.commit();
-
-            // 3. Delete all applications for this project (can't batch query+delete easily, so run separately)
-            const appsSnap = await targetDb.collection('applications').where('projectId', '==', projectId).get();
-            const appDeletes = appsSnap.docs.map(doc => doc.ref.delete());
-            await Promise.all(appDeletes);
-
-            // 4. Delete all messages inside the team thread
-            const messagesSnap = await targetDb.collection('threads').doc('team_' + projectId).collection('messages').get();
-            const msgDeletes = messagesSnap.docs.map(doc => doc.ref.delete());
-            await Promise.all(msgDeletes);
+            // The server also removes top-level messages in bounded batches.
+            await targetDb.collection('projects').doc(projectId).delete();
 
         } catch(err) {
             console.error('Destroy project error:', err);

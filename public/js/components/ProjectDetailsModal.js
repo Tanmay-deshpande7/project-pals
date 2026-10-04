@@ -94,7 +94,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
                             const connectionsQuery = [];
                             for(let i=0; i < connections.length; i+=10) {
                                 const chunk = connections.slice(i, i+10);
-                                const snap = await window.db.collection('users').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+                                const snap = await window.db.collection('users').where('__name__', 'in', chunk).get();
                                 snap.forEach(d => connectionsQuery.push({id: d.id, ...d.data()}));
                             }
                             // Filter out people already in project
@@ -121,7 +121,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
                 const crewDocs = [];
                 for (let i = 0; i < project.participants.length; i += 10) {
                     const chunk = project.participants.slice(i, i + 10);
-                    const snap = await window.db.collection('users').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+                    const snap = await window.db.collection('users').where('__name__', 'in', chunk).get();
                     snap.forEach(d => crewDocs.push({ id: d.id, ...d.data() }));
                 }
                 setProjectCrew(crewDocs);
@@ -348,36 +348,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
             if (action === 'hired') {
                 const projectId = project.id || project.projectId;
                 
-                const projectDoc = await window.db.collection('projects').doc(projectId).get();
-                if (projectDoc.exists) {
-                    const projData = projectDoc.data();
-                    let updatedRoles = projData.roles || [];
-                    
-                    const appDoc = await window.db.collection('applications').doc(appId).get();
-                    if (appDoc.exists) {
-                         const appliedRoleTitle = appDoc.data().role;
-                         const appliedRoleIdx = updatedRoles.findIndex(r => r.title === appliedRoleTitle && !r.assigneeId);
-                         if (appliedRoleIdx !== -1) {
-                             updatedRoles[appliedRoleIdx].assigneeId = applicantId;
-                         }
-                    }
-
-                    await window.db.collection('projects').doc(projectId).update({
-                        participants: window.firebase.firestore.FieldValue.arrayUnion(applicantId),
-                        roles: updatedRoles
-                    });
-                    
-                    if (project.roles) {
-                         const idx = project.roles.findIndex(r => !r.assigneeId);
-                         if (idx !== -1) project.roles[idx].assigneeId = applicantId;
-                    }
-                }
-                
-                // Update Team Chat participants if it exists
-                await window.db.collection('threads').doc('team_' + projectId).set({
-                    participants: window.firebase.firestore.FieldValue.arrayUnion(applicantId)
-                }, { merge: true });
-                
+                // Membership and role assignment committed by the server with application status.
                 // Add to project object locally so UI updates immediately
                 if (!project.participants) project.participants = [];
                 if (!project.participants.includes(applicantId)) project.participants.push(applicantId);
@@ -474,14 +445,11 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
 
             // 2. Remove from project participants array & update roles if changed
             await window.db.collection('projects').doc(projectId).update({
-                participants: window.firebase.firestore.FieldValue.arrayRemove(memberId),
+                participants: window.secureFieldValue.arrayRemove(memberId),
                 ...(rolesChanged ? { roles: updatedRoles } : {})
             });
 
-            // 3. Update team chat thread to remove access
-            await window.db.collection('threads').doc('team_' + projectId).set({
-                participants: window.firebase.firestore.FieldValue.arrayRemove(memberId)
-            }, { merge: true });
+            // Team-thread membership is synchronized by the server.
 
             // 4. Optionally mark application as released/removed if they were hired via application
             const appSnap = await window.db.collection('applications')
@@ -543,56 +511,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
 
             await window.db.collection('messages').add(messageData);
 
-            const threadRef = window.db.collection('threads').doc(chatId);
-            const threadDoc = await threadRef.get();
-            const currentData = threadDoc.exists ? threadDoc.data() : {};
-
-            // Thread Update Logic
-            const threadData = {
-                lastMessage: chatInput,
-                lastUpdated: new Date()
-            };
-
-            // Increment unread count for everyone in the chat
-            let chatMembers = [];
-            if (project.chatId && !project.chatId.startsWith('team_')) {
-                if (chatPartner) chatMembers = [chatPartner.id];
-            } else {
-                chatMembers = [...new Set([project.authorId, ...(project.participants || [])])];
-            }
-            
-            chatMembers.forEach(memberId => {
-                if (memberId !== user.uid) {
-                    threadData[`unreadCount_${memberId}`] = window.firebase.firestore.FieldValue.increment(1);
-                    
-                    // Trigger notification exactly on the 10th unread message
-                    const currentUnread = currentData[`unreadCount_${memberId}`] || 0;
-                    if (currentUnread === 9 && window.sendNotification) {
-                        window.db.collection('users').doc(memberId).get().then(doc => {
-                            if (doc.exists) {
-                                window.sendNotification(
-                                    memberId,
-                                    doc.data().email,
-                                    'New Unread Messages',
-                                    `You have 10 unread messages in the "${projectTitle}" chat. Log in to catch up!`,
-                                    'chat'
-                                );
-                            }
-                        }).catch(e => console.warn("Could not fetch user to notify", e));
-                    }
-                }
-            });
-
-            if (!project.chatId) {
-                // First time chat creation from Card
-                if (!user.uid || !authorId) throw new Error("Missing participant IDs");
-                threadData.chatId = chatId;
-                threadData.projectId = projectId;
-                threadData.projectTitle = projectTitle + " (Team Chat)";
-                threadData.participants = [...new Set([authorId, user.uid, ...(project.participants || [])])];
-            }
-
-            await threadRef.set(threadData, { merge: true });
+            // The server binds sender/membership and updates thread counters atomically.
 
             setChatInput('');
         } catch (err) {

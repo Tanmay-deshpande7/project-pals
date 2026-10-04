@@ -8,3 +8,7 @@ dist/
 .DS_Store
 .firebase/
 
+
+# Recovery credentials must live in a password manager, not source control.
+*_recovery_code*
+*service-account*.json

@@ -12,7 +12,9 @@ const EventMonitor = ({ eventId, onBack, onSelectEvent }) => {
         setLoading(true);
         if (!eventId) {
             // Fetch all events
-            const unsub = window.db.collection('events').orderBy('createdAt', 'desc').onSnapshot(snap => {
+            // Organizers manage their own events; administrators can review every owner.
+            const query = window.portalAccess?.admin ? window.db.collection('events') : window.db.collection('events').where('ownerId', '==', window.auth.currentUser.uid);
+            const unsub = query.orderBy('createdAt', 'desc').onSnapshot(snap => {
                 setEvents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 setLoading(false);
             });

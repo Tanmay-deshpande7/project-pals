@@ -18,10 +18,10 @@ const AuthForm = ({ type, onSwitch, onLoginSuccess }) => {
                 // Create user document in Firestore (optional but good practice)
                 await window.db.collection('users').doc(userCredential.user.uid).set({
                     displayName: name,
-                    email: email,
+                    email: userCredential.user.email,
                     networkId: shortId,
-                    createdAt: new Date()
-                });
+                    // Creation time and shard are assigned by the server.
+                }, { merge: true });
             } else {
                 await window.auth.signInWithEmailAndPassword(email, password);
             }
@@ -48,8 +48,8 @@ const AuthForm = ({ type, onSwitch, onLoginSuccess }) => {
                     displayName: result.user.displayName,
                     email: result.user.email,
                     networkId: shortId,
-                    createdAt: new Date()
-                });
+                    // Creation time and shard are assigned by the server.
+                }, { merge: true });
             }
             onLoginSuccess();
         } catch (err) {
