@@ -1,32 +1,46 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+"use strict";
+const { onRequest } = require("firebase-functions/v2/https");
+const { initializeApp, getApps, applicationDefault } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore, FieldPath } = require("firebase-admin/firestore");
+const { randomInt, randomUUID } = require("node:crypto");
+const { STORES } = require("./policy");
+const { createGateway } = require("./gateway");
+const { createHttpHandler } = require("./http");
+const databases = new Map();
+function database(key) {
+    if (!databases.has(key)) {
+        const name = `data-${key}`;
+        const app = getApps().find(a => a.name === name) || initializeApp({ credential: applicationDefault(), projectId: STORES[key] }, name);
+        databases.set(key, getFirestore(app));
+    }
+    return databases.get(key);
+}
+const identity = getAuth(initializeApp({ projectId: STORES.master }));
+function query(db, path, q) {
+    let ref = db.collection(path);
+    for (const [f, op, v] of q.filters || []) ref = ref.where(f === "__name__" ? FieldPath.documentId() : f, op, v);
+    if (q.order) ref = ref.orderBy(...q.order);
+    return ref.limit(q.limit || 200);
+}
+const rows = snap => snap.docs.map(d => ({ id: d.id, data: d.data() }));
+const store = {
+    get: async (key, path) => { const d = await database(key).doc(path).get(); return d.exists ? d.data() : null; },
+    query: async (key, path, q) => rows(await query(database(key), path, q).get()),
+    set: (key, path, data) => database(key).doc(path).set(data),
+    deleteMany: async (key, paths) => { if (!paths.length) return; const db = database(key), batch = db.batch(); paths.forEach(p => batch.delete(db.doc(p))); await batch.commit(); },
+    transaction: (key, action) => {
+        const db = database(key);
+        return db.runTransaction(tx => action({
+            get: async path => { const d = await tx.get(db.doc(path)); return d.exists ? d.data() : null; },
+            query: async (path, q) => rows(await tx.get(query(db, path, q))),
+            set: (path, data) => tx.set(db.doc(path), data),
+            delete: path => tx.delete(db.doc(path))
+        }));
+    }
+};
+const gateway = createGateway({ store, auth: identity, chooseShard: () => `shard-${randomInt(1, 5)}`, newId: randomUUID });
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
-
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
-
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
-
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// Hosting forwards same-origin /api requests here. Direct calls still require a
+// verified master-project bearer token; no caller can select a different identity.
+exports.collaborationApi = onRequest({ region: "asia-south1", maxInstances: 5, timeoutSeconds: 60, memory: "256MiB" }, createHttpHandler(identity, gateway));

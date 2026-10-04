@@ -6,35 +6,35 @@
     <title>ProjectPals Events Portal</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     
-    <link rel="stylesheet" href="dist/style.css?v=1">
+    <link rel="stylesheet" href="dist/style.css?v=security-1">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- React & ReactDOM -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous"></script>
     
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" integrity="sha384-4gq9w/AGf72FXdNQ3Kn3EqWP7633NbCMjpYHt8YCZyXf23o2opcuAr4cif41tLrC" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js" integrity="sha384-xtdq4MQqPj1dB5DQsuw9O7dh4kHhMP/Wp5u8O1jiaWiou13ZfJIgiccjtVK2pBhL" crossorigin="anonymous"></script>
 
     <!-- Lucide Icons -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" integrity="sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6" crossorigin="anonymous"></script>
   </head>
   <body class="bg-[#0B0B15] text-white font-sans antialiased">
     <div id="root"></div>
 
     <!-- Firebase Config -->
-    <script src="dist/js/firebase-config.js?v=2"></script>
+    <script src="dist/js/shared/secure-data-client.js"></script>
+    <script src="dist/js/firebase-config.js?v=security-1"></script>
 
     <!-- Components -->
-    <script src="dist/js/components/Icons.js?v=2"></script>
-    <script src="dist/js/components/AuthForm.js?v=2"></script>
-    <script src="dist/js/components/EventForm.js?v=2"></script>
-    <script src="dist/js/components/EventMonitor.js?v=2"></script>
-    <script src="dist/js/components/Dashboard.js?v=2"></script>
+    <script src="dist/js/components/Icons.js?v=security-1"></script>
+    <script src="dist/js/components/AuthForm.js?v=security-1"></script>
+    <script src="dist/js/components/EventForm.js?v=security-1"></script>
+    <script src="dist/js/components/EventMonitor.js?v=security-1"></script>
+    <script src="dist/js/components/Dashboard.js?v=security-1"></script>
 
     <!-- Main Entry -->
-    <script src="dist/js/app.js?v=2"></script>
+    <script src="dist/js/app.js?v=security-1"></script>
   </body>
 </html>

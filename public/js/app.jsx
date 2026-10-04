@@ -110,6 +110,7 @@ const Root = () => {
                 setAuthLoading(true);
                 try {
                     await window.initializeUserShard(u.uid);
+                    if (window.auth.currentUser?.uid !== u.uid) return;
                     
                     // Presence tracking
                     const userRef = window.db.collection('users').doc(u.uid);
@@ -125,7 +126,10 @@ const Root = () => {
                     updatePresence();
                     presenceInterval = setInterval(updatePresence, 60000);
                 } catch (e) {
-                    console.error("Error during authentication bootstrapper:", e);
+                    if (window.auth.currentUser?.uid !== u.uid) return;
+                    alert(e.message);
+                    await window.auth.signOut();
+                    setUser(null); setAuthLoading(false); return;
                 }
                 setUser(u);
                 setAuthLoading(false);

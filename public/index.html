@@ -50,22 +50,21 @@
     </script>
     
     <!-- Compiled Tailwind CSS -->
-    <link rel="stylesheet" href="dist/style.css?v=17">
+    <link rel="stylesheet" href="dist/style.css?v=security-1">
     
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- React & ReactDOM (Production Mode) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous"></script>
     
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" integrity="sha384-4gq9w/AGf72FXdNQ3Kn3EqWP7633NbCMjpYHt8YCZyXf23o2opcuAr4cif41tLrC" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js" integrity="sha384-xtdq4MQqPj1dB5DQsuw9O7dh4kHhMP/Wp5u8O1jiaWiou13ZfJIgiccjtVK2pBhL" crossorigin="anonymous"></script>
 
     <!-- Lucide Icons -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" integrity="sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6" crossorigin="anonymous"></script>
   </head>
   <body class="bg-background text-main font-sans">
     <!-- Root Container with Fallback Markup for Google Crawlers -->
@@ -84,26 +83,27 @@
     </noscript>
 
     <!-- App Logic -->
-    <script src="dist/js/firebase-config.js?v=17"></script>
+    <script src="dist/js/shared/secure-data-client.js"></script>
+    <script src="dist/js/firebase-config.js?v=security-1"></script>
 
     <!-- Components -->
-    <script src="dist/js/components/Icons.js?v=21"></script>
-    <script src="dist/js/components/Logo.js?v=21"></script>
-    <script src="dist/js/components/Background.js?v=21"></script>
-    <script src="dist/js/components/AuthForm.js?v=21"></script>
-    <script src="dist/js/components/CreateProjectModal.js?v=21"></script>
-    <script src="dist/js/components/ProjectDetailsModal.js?v=23"></script>
-    <script src="dist/js/components/MessagesView.js?v=21"></script>
-    <script src="dist/js/components/SettingsView.js?v=21"></script>
-    <script src="dist/js/components/NetworkView.js?v=21"></script>
-    <script src="dist/js/components/EventsView.js?v=25"></script>
-    <script src="dist/js/components/LandingPage.js?v=21"></script>
-    <script src="dist/js/utils/sendNotification.js?v=21"></script>
-    <script src="dist/js/components/NotificationManager.js?v=21"></script>
-    <script src="dist/js/components/Dashboard.js?v=22"></script>
+    <script src="dist/js/components/Icons.js?v=security-1"></script>
+    <script src="dist/js/components/Logo.js?v=security-1"></script>
+    <script src="dist/js/components/Background.js?v=security-1"></script>
+    <script src="dist/js/components/AuthForm.js?v=security-1"></script>
+    <script src="dist/js/components/CreateProjectModal.js?v=security-1"></script>
+    <script src="dist/js/components/ProjectDetailsModal.js?v=security-1"></script>
+    <script src="dist/js/components/MessagesView.js?v=security-1"></script>
+    <script src="dist/js/components/SettingsView.js?v=security-1"></script>
+    <script src="dist/js/components/NetworkView.js?v=security-1"></script>
+    <script src="dist/js/components/EventsView.js?v=security-1"></script>
+    <script src="dist/js/components/LandingPage.js?v=security-1"></script>
+    <script src="dist/js/utils/sendNotification.js?v=security-1"></script>
+    <script src="dist/js/components/NotificationManager.js?v=security-1"></script>
+    <script src="dist/js/components/Dashboard.js?v=security-1"></script>
 
     <!-- Main Entry -->
-    <script src="dist/js/app.js?v=22"></script>
+    <script src="dist/js/app.js?v=security-1"></script>
 
   </body>
 </html>

@@ -1,6 +1,7 @@
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "hosting": [
     {
@@ -14,7 +15,32 @@
       ],
       "headers": [
         {
-          "source": "**/index.html",
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=()"
+            },
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-2TyggwpcxpSWGHS16A74z9evA2Dn768IkjsZKg9hxic=' https://cdnjs.cloudflare.com https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://projectpals-66223.firebaseapp.com; frame-src https://projectpals-66223.firebaseapp.com https://accounts.google.com; upgrade-insecure-requests"
+            }
+          ]
+        },
+        {
+          "source": "**/*.html",
           "headers": [
             {
               "key": "Cache-Control",
@@ -24,6 +50,14 @@
         }
       ],
       "rewrites": [
+        {
+          "source": "/api/**",
+          "function": {
+            "functionId": "collaborationApi",
+            "region": "asia-south1",
+            "pinTag": true
+          }
+        },
         {
           "source": "**",
           "destination": "/index.html"
@@ -41,8 +75,52 @@
       ],
       "rewrites": [
         {
+          "source": "/api/**",
+          "function": {
+            "functionId": "collaborationApi",
+            "region": "asia-south1",
+            "pinTag": true
+          }
+        },
+        {
           "source": "**",
           "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=()"
+            },
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://projectpals-66223.firebaseapp.com; frame-src https://projectpals-66223.firebaseapp.com https://accounts.google.com; upgrade-insecure-requests"
+            }
+          ]
+        },
+        {
+          "source": "**/*.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
         }
       ]
     },
@@ -57,9 +135,64 @@
       ],
       "rewrites": [
         {
+          "source": "/api/**",
+          "function": {
+            "functionId": "collaborationApi",
+            "region": "asia-south1",
+            "pinTag": true
+          }
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=()"
+            },
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://projectpals-66223.firebaseapp.com; frame-src https://projectpals-66223.firebaseapp.com https://accounts.google.com; upgrade-insecure-requests"
+            }
+          ]
+        },
+        {
+          "source": "**/*.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "collaboration",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log"
       ]
     }
   ]

@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "Project Pals",
   "scripts": {
-    "build:adminjs": "babel admin/js --out-dir admin/dist/js",
-    "build:js": "babel public/js --out-dir public/dist/js",
+    "build:adminjs": "babel admin/js --out-dir admin/dist/js && babel shared --out-dir admin/dist/js/shared",
+    "build:js": "babel public/js --out-dir public/dist/js && babel shared --out-dir public/dist/js/shared",
     "build:css": "tailwindcss -i public/style.css -o public/dist/style.css --minify",
-    "build:admincss": "tailwindcss -i public/style.css -o admin/dist/style.css --minify",
-    "build:eventsjs": "babel events/js --out-dir events/dist/js",
+    "build:admincss": "tailwindcss -c admin/tailwind.config.js -i public/style.css -o admin/dist/style.css --minify",
+    "build:eventsjs": "babel events/js --out-dir events/dist/js && babel shared --out-dir events/dist/js/shared",
     "build:eventscss": "tailwindcss -i public/style.css -o events/dist/style.css --minify",
-    "build": "npm run build:js && npm run build:css && npm run build:adminjs && npm run build:admincss && npm run build:eventsjs && npm run build:eventscss"
+    "build": "npm run build:js && npm run build:css && npm run build:adminjs && npm run build:admincss && npm run build:eventsjs && npm run build:eventscss",
+    "test": "node --test --test-isolation=none tests/*.test.cjs"
   },
   "devDependencies": {
     "@babel/cli": "^7.23.9",

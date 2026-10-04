@@ -1,60 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProjectPals | Admin</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     
-    <!-- Use the same tailwind build as public if no admin-specific css exists, or fallback to cdn for simple UI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#8b5cf6',
-                        accent: '#ec4899',
-                        background: '#0f172a',
-                        surface: '#1e293b',
-                        divider: 'rgba(255,255,255,0.05)',
-                        'divider-strong': 'rgba(255,255,255,0.1)',
-                        main: '#f8fafc',
-                        muted: '#94a3b8'
-                    }
-                }
-            }
-        }
-    </script>
-    
+    <!-- Compiled CSS replaces runtime code injection from the Tailwind CDN. -->
+    <link rel="stylesheet" href="dist/style.css?v=security-1">
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- React & ReactDOM (Production Mode) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous"></script>
     
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" integrity="sha384-4gq9w/AGf72FXdNQ3Kn3EqWP7633NbCMjpYHt8YCZyXf23o2opcuAr4cif41tLrC" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js" integrity="sha384-xtdq4MQqPj1dB5DQsuw9O7dh4kHhMP/Wp5u8O1jiaWiou13ZfJIgiccjtVK2pBhL" crossorigin="anonymous"></script>
 
     <!-- Lucide Icons -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" integrity="sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6" crossorigin="anonymous"></script>
 </head>
 <body class="bg-background text-main font-sans tracking-tight min-h-screen">
     <div id="root"></div>
 
     <!-- App Logic -->
-    <script src="dist/js/firebase-config.js?v=20"></script>
+    <script src="dist/js/shared/secure-data-client.js"></script>
+    <script src="dist/js/firebase-config.js?v=security-1"></script>
 
     <!-- Components -->
-    <script src="dist/js/components/Icons.js?v=21"></script>
-    <script src="dist/js/components/AdminAuth.js?v=22"></script>
-    <script src="dist/js/components/AdminDashboard.js?v=22"></script>
+    <script src="dist/js/components/Icons.js?v=security-1"></script>
+    <script src="dist/js/components/AdminAuth.js?v=security-1"></script>
+    <script src="dist/js/components/AdminDashboard.js?v=security-1"></script>
 
     <!-- Main Entry -->
-    <script src="dist/js/app.js?v=20"></script>
+    <script src="dist/js/app.js?v=security-1"></script>
 </body>
 </html>

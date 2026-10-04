@@ -169,17 +169,16 @@ const NotificationManager = ({ user }) => {
 
     // ── Mark all as read ─────────────────────────────────────────────────────
     const markAllRead = async () => {
-        const batch = window.db.batch();
-        notifications
-            .filter(n => !n.read)
-            .forEach(n => {
-                batch.update(
-                    window.db.collection('users').doc(user.uid)
-                        .collection('notifications').doc(n.id),
-                    { read: true }
-                );
-            });
-        await batch.commit().catch(() => {});
+        const unread = notifications.filter(n => !n.read);
+        // Keep each transaction within the server's bounded write limit.
+        for (let i = 0; i < unread.length; i += 50) {
+            const batch = window.db.batch();
+            unread.slice(i, i + 50).forEach(n => batch.update(
+                window.db.collection('users').doc(user.uid).collection('notifications').doc(n.id),
+                { read: true }
+            ));
+            await batch.commit().catch(() => {});
+        }
     };
 
     // ── Helpers ───────────────────────────────────────────────────────────────

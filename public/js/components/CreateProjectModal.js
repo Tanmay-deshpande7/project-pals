@@ -15,7 +15,7 @@ const CreateProjectModal = ({ isOpen, onClose, user }) => {
                          const connectionsQuery = [];
                          for(let i=0; i < connections.length; i+=10) {
                              const chunk = connections.slice(i, i+10);
-                             const snap = await window.db.collection('users').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+                             const snap = await window.db.collection('users').where('__name__', 'in', chunk).get();
                              snap.forEach(d => connectionsQuery.push({id: d.id, ...d.data()}));
                          }
                          setMyCrew(connectionsQuery);

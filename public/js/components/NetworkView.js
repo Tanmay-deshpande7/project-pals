@@ -26,7 +26,7 @@ const NetworkView = ({ user }) => {
                         // Firestore only allows 'in' queries with up to 10 items. For simplicity padding:
                         for(let i = 0; i < connections.length; i+=10) {
                             const chunk = connections.slice(i, i+10);
-                            const snap = await window.db.collection('users').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+                            const snap = await window.db.collection('users').where('__name__', 'in', chunk).get();
                             snap.forEach(d => connectionsQuery.push({id: d.id, ...d.data()}));
                         }
                         setMyCrew(connectionsQuery);
@@ -136,27 +136,7 @@ const NetworkView = ({ user }) => {
 
     const handleRequestAction = async (request, action) => {
         try {
-            if (action === 'accepted') {
-                if (request.type === 'crew_request') {
-                    // Update both users' connections arrays
-                    await window.db.collection('users').doc(user.uid).set({
-                        connections: window.firebase.firestore.FieldValue.arrayUnion(request.senderId)
-                    }, { merge: true });
-
-                    await window.db.collection('users').doc(request.senderId).set({
-                        connections: window.firebase.firestore.FieldValue.arrayUnion(user.uid)
-                    }, { merge: true });
-                } else if (request.type === 'project_invite') {
-                    // Project Invite Acceptance: add to project.participants
-                    if (request.projectId) {
-                        await window.db.collection('projects').doc(request.projectId).update({
-                            participants: window.firebase.firestore.FieldValue.arrayUnion(user.uid)
-                        });
-                    }
-                }
-                alert("Request Accepted!");
-            }
-            
+            // The server validates the recipient and completes the membership transition.
             // Delete or mark resolved
             await window.db.collection('requests').doc(request.id).update({
                 status: action,
