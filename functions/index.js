@@ -1,5 +1,7 @@
 "use strict";
 const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { defineSecret, defineBoolean, defineString, defineInt } = require("firebase-functions/params");
 const { initializeApp, getApps, applicationDefault } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldPath } = require("firebase-admin/firestore");
@@ -7,6 +9,7 @@ const { randomInt, randomUUID } = require("node:crypto");
 const { STORES } = require("./policy");
 const { createGateway } = require("./gateway");
 const { createHttpHandler } = require("./http");
+const { createEmailDelivery } = require("./email-delivery");
 const databases = new Map();
 function database(key) {
     if (!databases.has(key)) {
@@ -44,3 +47,28 @@ const gateway = createGateway({ store, auth: identity, chooseShard: () => `shard
 // Hosting forwards same-origin /api requests here. Direct calls still require a
 // verified master-project bearer token; no caller can select a different identity.
 exports.collaborationApi = onRequest({ region: "asia-south1", maxInstances: 5, timeoutSeconds: 60, memory: "256MiB" }, createHttpHandler(identity, gateway));
+
+// Disabled until the owner enables private-key enforcement at EmailJS and
+// confirms that the formerly public-only request is rejected by the provider.
+const emailPrivateKey = defineSecret("EMAILJS_PRIVATE_KEY");
+const emailEnabled = defineBoolean("EMAILJS_ENABLED", { default: false });
+const emailService = defineString("EMAILJS_SERVICE_ID", { default: "service_5wncowy" });
+const emailTemplate = defineString("EMAILJS_TEMPLATE_ID", { default: "template_yzu2scl" });
+const emailPublicKey = defineString("EMAILJS_PUBLIC_KEY", { default: "0j9iihpWE8FEyxJZt" });
+const emailDailyLimit = defineInt("EMAILJS_DAILY_LIMIT", { default: 50 });
+const emailMonthlyLimit = defineInt("EMAILJS_MONTHLY_LIMIT", { default: 200 });
+const emailRecipientLimit = defineInt("EMAILJS_RECIPIENT_HOURLY_LIMIT", { default: 5 });
+const deliverEmail = createEmailDelivery({ store, auth: identity, config: () => ({
+    enabled: emailEnabled.value(), privateKey: emailEnabled.value() ? emailPrivateKey.value() : "",
+    serviceId: emailService.value(), templateId: emailTemplate.value(), publicKey: emailPublicKey.value(),
+    dailyLimit: emailDailyLimit.value(), monthlyLimit: emailMonthlyLimit.value(), recipientHourlyLimit: emailRecipientLimit.value()
+}) });
+exports.notificationEmail = onDocumentCreated({
+    document: "users/{uid}/notifications/{noticeId}", database: "(default)",
+    region: "asia-south1", maxInstances: 1, concurrency: 1, timeoutSeconds: 60,
+    memory: "256MiB", retry: true, secrets: [emailPrivateKey]
+}, async event => {
+    if (!event.data) return;
+    const result = await deliverEmail({ ...event.params, notification: event.data.data() });
+    console.info("Notification email outcome", { status: result.status });
+});
