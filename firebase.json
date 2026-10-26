@@ -54,8 +54,7 @@
           "source": "/api/**",
           "function": {
             "functionId": "collaborationApi",
-            "region": "asia-south1",
-            "pinTag": true
+            "region": "asia-south1"
           }
         },
         {
@@ -78,8 +77,7 @@
           "source": "/api/**",
           "function": {
             "functionId": "collaborationApi",
-            "region": "asia-south1",
-            "pinTag": true
+            "region": "asia-south1"
           }
         },
         {
@@ -138,8 +136,7 @@
           "source": "/api/**",
           "function": {
             "functionId": "collaborationApi",
-            "region": "asia-south1",
-            "pinTag": true
+            "region": "asia-south1"
           }
         },
         {
