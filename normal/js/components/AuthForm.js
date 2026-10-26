@@ -12,10 +12,16 @@ const AuthForm = ({ type, onSwitch, onLoginSuccess }) => {
         try {
             if (type === 'signup') {
                 const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
-                // Update Auth profile with display name
+                // Update profile with name
                 await userCredential.user.updateProfile({ displayName: name });
-                // User document is created server-side by the gateway bootstrap
-                // (initializeUserShard runs in app.jsx after onAuthStateChanged fires)
+                const shortId = userCredential.user.uid.substring(0, 8).toUpperCase();
+                // Create user document in Firestore (optional but good practice)
+                await window.db.collection('users').doc(userCredential.user.uid).set({
+                    displayName: name,
+                    email: email,
+                    networkId: shortId,
+                    createdAt: new Date()
+                });
             } else {
                 await window.auth.signInWithEmailAndPassword(email, password);
             }
@@ -32,9 +38,19 @@ const AuthForm = ({ type, onSwitch, onLoginSuccess }) => {
         setLoading(true);
         try {
             const provider = new window.firebase.auth.GoogleAuthProvider();
-            await window.auth.signInWithPopup(provider);
-            // User document is created/updated server-side by the gateway bootstrap
-            // (initializeUserShard runs in app.jsx after onAuthStateChanged fires)
+            const result = await window.auth.signInWithPopup(provider);
+            
+            // If new user, create their document in firestore (optional check)
+            const userDoc = await window.db.collection('users').doc(result.user.uid).get();
+            if (!userDoc.exists) {
+                const shortId = result.user.uid.substring(0, 8).toUpperCase();
+                await window.db.collection('users').doc(result.user.uid).set({
+                    displayName: result.user.displayName,
+                    email: result.user.email,
+                    networkId: shortId,
+                    createdAt: new Date()
+                });
+            }
             onLoginSuccess();
         } catch (err) {
             setError(err.message);
@@ -90,7 +106,7 @@ const AuthForm = ({ type, onSwitch, onLoginSuccess }) => {
                                 type="password"
                                 required
                                 className="w-full bg-background border border-divider-strong rounded-lg p-3 text-main focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all"
-                                placeholder="••••••••"
+                                placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />

@@ -1,4 +1,4 @@
-// ── Global Audio Context Singleton ──────────────────────────────────────────
+// ΓöÇΓöÇ Global Audio Context Singleton ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 let globalAudioCtx = null;
 
 const initGlobalAudio = () => {
@@ -79,7 +79,7 @@ const NotificationManager = ({ user }) => {
     const bellRef = React.useRef(null);
     // No longer handling AudioContext here, it's global now!
 
-    // ── Request browser notification permission ──────────────────────────────
+    // ΓöÇΓöÇ Request browser notification permission ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     React.useEffect(() => {
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
@@ -92,7 +92,7 @@ const NotificationManager = ({ user }) => {
         }
     }, []);
 
-    // ── Subscribe to Firestore notifications ─────────────────────────────────
+    // ΓöÇΓöÇ Subscribe to Firestore notifications ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     React.useEffect(() => {
         if (!user) return;
 
@@ -119,7 +119,7 @@ const NotificationManager = ({ user }) => {
                         const n = change.doc.data();
                         if (permissionGranted && 'Notification' in window) {
                             try {
-                                const desktop = new Notification(`ProjectPals — ${n.title}`, {
+                                const desktop = new Notification(`ProjectPals ΓÇö ${n.title}`, {
                                     body: n.body,
                                     icon: '/assets/icons/logo.svg',
                                     tag: change.doc.id,
@@ -138,7 +138,7 @@ const NotificationManager = ({ user }) => {
         return () => unsub();
     }, [user, permissionGranted]);
 
-    // ── Close panel on outside click ─────────────────────────────────────────
+    // ΓöÇΓöÇ Close panel on outside click ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     React.useEffect(() => {
         const handler = (e) => {
             if (panelRef.current && !panelRef.current.contains(e.target) &&
@@ -150,14 +150,14 @@ const NotificationManager = ({ user }) => {
         return () => document.removeEventListener('mousedown', handler);
     }, [panelOpen]);
 
-    // ── Compute panel position from bell button rect (fixed, always on-screen) ─
+    // ΓöÇΓöÇ Compute panel position from bell button rect (fixed, always on-screen) ΓöÇ
     const openPanel = () => {
         if (bellRef.current) {
             const rect = bellRef.current.getBoundingClientRect();
             const panelWidth = 360;
             const viewportWidth = window.innerWidth;
 
-            // Place below the bell, flush right of it — but clamp so it stays on screen
+            // Place below the bell, flush right of it ΓÇö but clamp so it stays on screen
             let left = rect.right - panelWidth;
             if (left < 8) left = 8; // too far left
             if (left + panelWidth > viewportWidth - 8) left = viewportWidth - panelWidth - 8;
@@ -167,7 +167,7 @@ const NotificationManager = ({ user }) => {
         setPanelOpen(prev => !prev);
     };
 
-    // ── Mark all as read ─────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Mark all as read ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const markAllRead = async () => {
         const batch = window.db.batch();
         notifications
@@ -182,7 +182,7 @@ const NotificationManager = ({ user }) => {
         await batch.commit().catch(() => {});
     };
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ΓöÇΓöÇ Helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     const iconFor = (type) => {
         if (type === 'crew_request') return 'user-plus';
         if (type === 'hired') return 'check-circle';
@@ -206,7 +206,7 @@ const NotificationManager = ({ user }) => {
 
     return (
         <>
-            {/* Bell Button — ref used to compute dropdown position */}
+            {/* Bell Button ΓÇö ref used to compute dropdown position */}
             <button
                 id="notif-bell-btn"
                 ref={bellRef}
@@ -222,7 +222,7 @@ const NotificationManager = ({ user }) => {
                 )}
             </button>
 
-            {/* Dropdown Panel — rendered in a portal via fixed position so it's never clipped */}
+            {/* Dropdown Panel ΓÇö rendered in a portal via fixed position so it's never clipped */}
             {panelOpen && ReactDOM.createPortal(
                 <div
                     ref={panelRef}

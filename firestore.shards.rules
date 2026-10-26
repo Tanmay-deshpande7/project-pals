@@ -1,8 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // The gateway uses the Admin SDK with IAM. Direct browser access must stay denied,
-    // including admins, private chat, registrations, and every recursive subcollection.
-    match /{document=**} { allow read, write: if false; }
+    match /{document=**} {
+      allow read, write, delete: if request.auth != null;
+    }
   }
 }

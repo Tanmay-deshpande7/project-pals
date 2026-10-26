@@ -1,5 +1,5 @@
 /**
- * sendNotification — Shared utility
+ * sendNotification ΓÇö Shared utility
  * Writes to users/{uid}/notifications AND optionally queues an email via mail collection.
  *
  * @param {string} uid         - Recipient Firebase UID
@@ -11,7 +11,15 @@
  */
 const sendNotification = async (uid, email, title, body, type = 'system', sendEmail = true) => {
     try {
-        // In-app notifications are automatically generated server-side by the collaboration API gateway.
+        // 1. Write in-app notification
+        await window.db.collection('users').doc(uid).collection('notifications').add({
+            title,
+            body,
+            type,
+            read: false,
+            createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        });
+
         // 2. Dispatch to EmailJS API
         if (sendEmail && email) {
             const EMAILJS_URL = "https://api.emailjs.com/api/v1.0/email/send";
@@ -43,7 +51,7 @@ const sendNotification = async (uid, email, title, body, type = 'system', sendEm
             }).catch(err => console.warn("EmailJS network error:", err));
         }
     } catch (err) {
-        // Silently fail — notifications are non-critical
+        // Silently fail ΓÇö notifications are non-critical
         console.warn('sendNotification failed:', err.message);
     }
 };

@@ -8,20 +8,13 @@ const App = () => {
             if (u) {
                 setLoading(true);
                 try {
-                    const access = await window.initializeUserShard(u.uid);
-                    if (window.auth.currentUser?.uid !== u.uid) return;
-                    if (!access.organizer) throw new Error('A verified organizer account is required. Contact the project owner.');
-                    window.portalAccess = access;
+                    await window.initializeUserShard(u.uid);
                 } catch (e) {
-                    if (window.auth.currentUser?.uid !== u.uid) return;
-                    alert(e.message);
-                    await window.auth.signOut();
-                    setUser(null); setLoading(false); return;
+                    console.error("Error bootstrapping user shard in events portal:", e);
                 }
                 setUser(u);
                 setLoading(false);
             } else {
-                window.portalAccess = null;
                 setUser(null);
                 setLoading(false);
             }

@@ -17,10 +17,12 @@ const SettingsView = ({ user }) => {
             await user.updateProfile({
                 displayName: name
             });
-            // Update displayName via secure gateway (only writable fields permitted)
-            await window.db.collection('users').doc(user.uid).update({ 
+            // Update the display name in Firestore
+            await window.db.collection('users').doc(user.uid).set({ 
                 displayName: name 
-            });
+            }, { merge: true });
+            
+            // Also notify dashboard to re-render or let it rely on reload. We can mock for now.
             setMessage('Profile updated successfully! Refresh to see changes globally.');
         } catch (error) {
             setMessage('Failed to update profile: ' + error.message);
@@ -32,7 +34,7 @@ const SettingsView = ({ user }) => {
 
     const handlePasswordReset = async () => {
         try {
-            await window.auth.sendPasswordResetEmail(user.email);
+            await firebase.auth().sendPasswordResetEmail(user.email);
             alert('Password reset email sent!');
         } catch (error) {
             alert('Error sending reset email: ' + error.message);

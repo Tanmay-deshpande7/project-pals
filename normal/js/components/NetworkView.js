@@ -23,10 +23,10 @@ const NetworkView = ({ user }) => {
                 if (connections.length > 0) {
                     try {
                         const connectionsQuery = [];
-                        // Firestore only allows 'in' queries with up to 10 items.
+                        // Firestore only allows 'in' queries with up to 10 items. For simplicity padding:
                         for(let i = 0; i < connections.length; i+=10) {
                             const chunk = connections.slice(i, i+10);
-                            const snap = await window.db.collection('users').where('__name__', 'in', chunk).get();
+                            const snap = await window.db.collection('users').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
                             snap.forEach(d => connectionsQuery.push({id: d.id, ...d.data()}));
                         }
                         setMyCrew(connectionsQuery);
@@ -111,6 +111,18 @@ const NetworkView = ({ user }) => {
                 createdAt: new Date()
             });
 
+            // Notify the recipient
+            const recipientDoc = await window.db.collection('users').doc(targetDocId).get();
+            const recipientEmail = recipientDoc.exists ? recipientDoc.data().email : null;
+            if (window.sendNotification) {
+                window.sendNotification(
+                    targetDocId, recipientEmail,
+                    'New Crew Request',
+                    `${user.displayName || 'Someone'} wants to add you to their crew. Check your Network tab to accept or decline.`,
+                    'crew_request'
+                );
+            }
+
             alert('Connection Request sent successfully!');
             setSearchId('');
             setActiveTab('mycrew');
@@ -124,18 +136,36 @@ const NetworkView = ({ user }) => {
 
     const handleRequestAction = async (request, action) => {
         try {
-            // Just update the request status — the gateway handles all side effects:
-            // - For crew_request accepted: links connections on both user documents
-            // - For project_invite accepted: adds user to project participants
+            if (action === 'accepted') {
+                if (request.type === 'crew_request') {
+                    // Update both users' connections arrays
+                    await window.db.collection('users').doc(user.uid).set({
+                        connections: window.firebase.firestore.FieldValue.arrayUnion(request.senderId)
+                    }, { merge: true });
+
+                    await window.db.collection('users').doc(request.senderId).set({
+                        connections: window.firebase.firestore.FieldValue.arrayUnion(user.uid)
+                    }, { merge: true });
+                } else if (request.type === 'project_invite') {
+                    // Project Invite Acceptance: add to project.participants
+                    if (request.projectId) {
+                        await window.db.collection('projects').doc(request.projectId).update({
+                            participants: window.firebase.firestore.FieldValue.arrayUnion(user.uid)
+                        });
+                    }
+                }
+                alert("Request Accepted!");
+            }
+            
+            // Delete or mark resolved
             await window.db.collection('requests').doc(request.id).update({
                 status: action,
                 updatedAt: new Date()
             });
 
-            if (action === 'accepted') alert('Request Accepted!');
         } catch(err) {
             console.error(err);
-            alert('Failed to process request: ' + err.message);
+            alert("Failed to process request");
         }
     };
 

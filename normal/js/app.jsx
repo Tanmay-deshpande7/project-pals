@@ -8,7 +8,7 @@ const Root = () => {
 
     // Theme Management Logic
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-
+    
     useEffect(() => {
         if (theme === 'dark') {
             document.documentElement.classList.add('dark');
@@ -33,18 +33,19 @@ const Root = () => {
             if (u) {
                 setAuthLoading(true);
                 try {
-                    // Bootstrap through the secure gateway — creates/updates the user
-                    // document server-side and sets the correct shard on the client.
-                    await window.initializeUserShard();
-
-                    // Presence tracking via secure gateway (users collection, allowed fields)
+                    await window.initializeUserShard(u.uid);
+                    
+                    // Presence tracking
+                    const userRef = window.db.collection('users').doc(u.uid);
                     const updatePresence = () => {
-                        window.db.collection('users').doc(u.uid).update({
+                        userRef.set({
                             isOnline: true,
-                            lastSeen: new Date()
-                        }).catch(err => console.warn("Presence update failed:", err));
+                            lastSeen: new Date(),
+                            displayName: u.displayName || 'User',
+                            email: u.email
+                        }, { merge: true }).catch(err => console.warn("Presence update failed:", err));
                     };
-
+                    
                     updatePresence();
                     presenceInterval = setInterval(updatePresence, 60000);
                 } catch (e) {
@@ -52,7 +53,7 @@ const Root = () => {
                 }
                 setUser(u);
                 setAuthLoading(false);
-                setShowLanding(false);
+                setShowLanding(false); // Auto-exit landing on login
             } else {
                 setUser(null);
                 setAuthLoading(false);
@@ -67,6 +68,7 @@ const Root = () => {
 
     if (authLoading) return <div className="min-h-screen bg-background flex items-center justify-center text-muted/70">Loading...</div>;
 
+    // If Logged In -> Dashboard
     if (user) {
         return (
             <React.Fragment>
@@ -76,6 +78,7 @@ const Root = () => {
         );
     }
 
+    // If Logged Out
     return (
         <React.Fragment>
             <window.Background />
@@ -85,7 +88,7 @@ const Root = () => {
                 <window.AuthForm
                     type={authType}
                     onSwitch={() => setAuthType(authType === 'login' ? 'signup' : 'login')}
-                    onLoginSuccess={() => { }}
+                    onLoginSuccess={() => { }} // Auth state change handles redirection
                 />
             )}
         </React.Fragment>

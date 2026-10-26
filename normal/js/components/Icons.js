@@ -120,7 +120,7 @@ const Icon = ({ name, size = 24, className = "" }) => {
         <svg {...svgProps}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
     );
 
-    // Final fallback — render nothing rather than a broken box
+    // Final fallback ΓÇö render nothing rather than a broken box
     return null;
 };
 

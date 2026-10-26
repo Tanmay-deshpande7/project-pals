@@ -94,7 +94,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
                             const connectionsQuery = [];
                             for(let i=0; i < connections.length; i+=10) {
                                 const chunk = connections.slice(i, i+10);
-                                const snap = await window.db.collection('users').where('__name__', 'in', chunk).get();
+                                const snap = await window.db.collection('users').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
                                 snap.forEach(d => connectionsQuery.push({id: d.id, ...d.data()}));
                             }
                             // Filter out people already in project
@@ -121,7 +121,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
                 const crewDocs = [];
                 for (let i = 0; i < project.participants.length; i += 10) {
                     const chunk = project.participants.slice(i, i + 10);
-                    const snap = await window.db.collection('users').where('__name__', 'in', chunk).get();
+                    const snap = await window.db.collection('users').where(window.firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
                     snap.forEach(d => crewDocs.push({ id: d.id, ...d.data() }));
                 }
                 setProjectCrew(crewDocs);
@@ -151,10 +151,10 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
             }
 
             if (chatId) {
-                // Reset my unread count when opening chat via gateway-compatible update
-                window.db.collection('threads').doc(chatId).update({
+                // Reset my unread count when opening chat
+                window.db.collection('threads').doc(chatId).set({
                     [`unreadCount_${user.uid}`]: 0
-                }).catch(err => console.warn('Could not reset unread count:', err));
+                }, { merge: true }).catch(err => console.error("Error resetting unread count:", err));
 
                 const isChatInitialLoad = { current: true };
                 const unsubscribe = window.db.collection('messages')
@@ -276,7 +276,23 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
                     createdAt: new Date(),
                     status: 'pending'
                 });
-                // Notification is sent server-side by the gateway when application is created.
+
+                // Notify the project author
+                const authorId = project.authorId;
+                if (authorId && authorId !== user.uid) {
+                    const authorDoc = await window.db.collection('users').doc(authorId).get();
+                    const authorEmail = authorDoc.exists ? authorDoc.data().email : null;
+                    if (window.sendNotification) {
+                        window.sendNotification(
+                            authorId, 
+                            authorEmail,
+                            'New Project Application',
+                            `${user.displayName} applied for "${selectedRole || 'General Application'}" on your project "${project.title || project.projectTitle}".`,
+                            'application'
+                        );
+                    }
+                }
+
                 alert("Application submitted successfully!");
                 setView('details');
             }
@@ -322,18 +338,73 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
 
     const handleApplicationAction = async (appId, applicantId, action) => {
         try {
-            // Update application status — the gateway handles all side effects:
-            // - If action is 'hired': adds applicant to project.participants, updates team thread, sends notification
-            // - If action is 'rejected': sends notification
+            // Update application status
             await window.db.collection('applications').doc(appId).update({
                 status: action,
                 updatedAt: new Date()
             });
 
-            // Update local project state for immediate UI feedback
+            // If hired, add to project participants for chat enablement and mark role as filled if applicable
             if (action === 'hired') {
+                const projectId = project.id || project.projectId;
+                
+                const projectDoc = await window.db.collection('projects').doc(projectId).get();
+                if (projectDoc.exists) {
+                    const projData = projectDoc.data();
+                    let updatedRoles = projData.roles || [];
+                    
+                    const appDoc = await window.db.collection('applications').doc(appId).get();
+                    if (appDoc.exists) {
+                         const appliedRoleTitle = appDoc.data().role;
+                         const appliedRoleIdx = updatedRoles.findIndex(r => r.title === appliedRoleTitle && !r.assigneeId);
+                         if (appliedRoleIdx !== -1) {
+                             updatedRoles[appliedRoleIdx].assigneeId = applicantId;
+                         }
+                    }
+
+                    await window.db.collection('projects').doc(projectId).update({
+                        participants: window.firebase.firestore.FieldValue.arrayUnion(applicantId),
+                        roles: updatedRoles
+                    });
+                    
+                    if (project.roles) {
+                         const idx = project.roles.findIndex(r => !r.assigneeId);
+                         if (idx !== -1) project.roles[idx].assigneeId = applicantId;
+                    }
+                }
+                
+                // Update Team Chat participants if it exists
+                await window.db.collection('threads').doc('team_' + projectId).set({
+                    participants: window.firebase.firestore.FieldValue.arrayUnion(applicantId)
+                }, { merge: true });
+                
+                // Add to project object locally so UI updates immediately
                 if (!project.participants) project.participants = [];
                 if (!project.participants.includes(applicantId)) project.participants.push(applicantId);
+
+                // Notify the hired person
+                const hiredUserDoc = await window.db.collection('users').doc(applicantId).get();
+                const hiredEmail = hiredUserDoc.exists ? hiredUserDoc.data().email : null;
+                if (window.sendNotification) {
+                    window.sendNotification(
+                        applicantId, hiredEmail,
+                        'You were hired! ≡ƒÄë',
+                        `Congratulations! You have been hired for the project "${project.title || project.projectTitle}". Head to your projects to access the team chat.`,
+                        'hired'
+                    );
+                }
+            } else if (action === 'rejected') {
+                // Notify the rejected applicant
+                const rejectedUserDoc = await window.db.collection('users').doc(applicantId).get();
+                const rejectedEmail = rejectedUserDoc.exists ? rejectedUserDoc.data().email : null;
+                if (window.sendNotification) {
+                    window.sendNotification(
+                        applicantId, rejectedEmail,
+                        'Application update',
+                        `Your application for "${project.title || project.projectTitle}" was not selected this time. Keep building!`,
+                        'application_update'
+                    );
+                }
             }
         } catch (err) {
             console.error("Error updating application:", err);
@@ -367,7 +438,18 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
                 status: 'pending',
                 createdAt: new Date()
             });
-            // Notification sent server-side by gateway when project_invite request is created.
+
+            // Notify the invited person
+            const invitedDoc = await window.db.collection('users').doc(crewMemberId).get();
+            const invitedEmail = invitedDoc.exists ? invitedDoc.data().email : null;
+            if (window.sendNotification) {
+                window.sendNotification(
+                    crewMemberId, invitedEmail,
+                    'Project Invitation',
+                    `${user.displayName || 'A maker'} invited you to join "${project.title || project.projectTitle}". Check your Network tab to respond.`,
+                    'crew_request'
+                );
+            }
             alert(`Project invite sent to ${crewMemberName}!`);
         } catch(e) {
             alert("Error sending invite");
@@ -392,14 +474,14 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
 
             // 2. Remove from project participants array & update roles if changed
             await window.db.collection('projects').doc(projectId).update({
-                participants: window.secureFieldValue.arrayRemove(memberId),
+                participants: window.firebase.firestore.FieldValue.arrayRemove(memberId),
                 ...(rolesChanged ? { roles: updatedRoles } : {})
             });
 
             // 3. Update team chat thread to remove access
-            await window.db.collection('threads').doc('team_' + projectId).update({
-                participants: window.secureFieldValue.arrayRemove(memberId)
-            });
+            await window.db.collection('threads').doc('team_' + projectId).set({
+                participants: window.firebase.firestore.FieldValue.arrayRemove(memberId)
+            }, { merge: true });
 
             // 4. Optionally mark application as released/removed if they were hired via application
             const appSnap = await window.db.collection('applications')
@@ -459,11 +541,58 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
                 createdAt: new Date()
             };
 
-            // Send the message — the gateway automatically:
-            // 1. Creates/updates the thread document with lastMessage, lastUpdated, participants
-            // 2. Increments unread counts for all other participants
-            // 3. Sends notification if someone hits 10 unread messages
             await window.db.collection('messages').add(messageData);
+
+            const threadRef = window.db.collection('threads').doc(chatId);
+            const threadDoc = await threadRef.get();
+            const currentData = threadDoc.exists ? threadDoc.data() : {};
+
+            // Thread Update Logic
+            const threadData = {
+                lastMessage: chatInput,
+                lastUpdated: new Date()
+            };
+
+            // Increment unread count for everyone in the chat
+            let chatMembers = [];
+            if (project.chatId && !project.chatId.startsWith('team_')) {
+                if (chatPartner) chatMembers = [chatPartner.id];
+            } else {
+                chatMembers = [...new Set([project.authorId, ...(project.participants || [])])];
+            }
+            
+            chatMembers.forEach(memberId => {
+                if (memberId !== user.uid) {
+                    threadData[`unreadCount_${memberId}`] = window.firebase.firestore.FieldValue.increment(1);
+                    
+                    // Trigger notification exactly on the 10th unread message
+                    const currentUnread = currentData[`unreadCount_${memberId}`] || 0;
+                    if (currentUnread === 9 && window.sendNotification) {
+                        window.db.collection('users').doc(memberId).get().then(doc => {
+                            if (doc.exists) {
+                                window.sendNotification(
+                                    memberId,
+                                    doc.data().email,
+                                    'New Unread Messages',
+                                    `You have 10 unread messages in the "${projectTitle}" chat. Log in to catch up!`,
+                                    'chat'
+                                );
+                            }
+                        }).catch(e => console.warn("Could not fetch user to notify", e));
+                    }
+                }
+            });
+
+            if (!project.chatId) {
+                // First time chat creation from Card
+                if (!user.uid || !authorId) throw new Error("Missing participant IDs");
+                threadData.chatId = chatId;
+                threadData.projectId = projectId;
+                threadData.projectTitle = projectTitle + " (Team Chat)";
+                threadData.participants = [...new Set([authorId, user.uid, ...(project.participants || [])])];
+            }
+
+            await threadRef.set(threadData, { merge: true });
 
             setChatInput('');
         } catch (err) {
@@ -937,7 +1066,7 @@ const ProjectDetailsModal = ({ isOpen, onClose, user, project, initialView = 'de
 
                                                     {!isSequence && (
                                                         <span className={`text-[10px] text-muted/70 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                                                            {msg.senderName || 'Unknown'} • {msg.createdAt && msg.createdAt.seconds ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+                                                            {msg.senderName || 'Unknown'} ΓÇó {msg.createdAt && msg.createdAt.seconds ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
                                                         </span>
                                                     )}
                                                 </div>
