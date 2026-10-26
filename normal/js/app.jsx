@@ -73,7 +73,12 @@ const Root = () => {
         return (
             <React.Fragment>
                 <window.Background />
-                <window.Dashboard user={user} onLogout={() => window.auth.signOut()} />
+                <window.Dashboard
+                    user={user}
+                    onLogout={() => window.auth.signOut()}
+                    theme={theme}
+                    onToggleTheme={window.toggleTheme}
+                />
             </React.Fragment>
         );
     }

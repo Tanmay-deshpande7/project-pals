@@ -1,4 +1,4 @@
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ user, onLogout, theme, onToggleTheme }) => {
     const [view, setView] = React.useState('dashboard'); // dashboard, messages, etc.
     const [projectsTab, setProjectsTab] = React.useState('applied');
     const [appliedProjectIds, setAppliedProjectIds] = React.useState(new Set());
@@ -8,6 +8,16 @@ const Dashboard = ({ user, onLogout }) => {
     const [loading, setLoading] = React.useState(true);
     const [totalUnreadCount, setTotalUnreadCount] = React.useState(0);
     const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+
+    const isDark = (theme || window.currentTheme || (document.documentElement.classList.contains('dark') ? 'dark' : 'light')) === 'dark';
+
+    const handleToggleTheme = () => {
+        if (typeof onToggleTheme === 'function') {
+            onToggleTheme();
+        } else if (typeof window.toggleTheme === 'function') {
+            window.toggleTheme();
+        }
+    };
 
 
     React.useEffect(() => {
@@ -168,10 +178,18 @@ const Dashboard = ({ user, onLogout }) => {
 
     return (
         <div className="min-h-screen flex flex-col md:flex-row relative z-10">
-            {/* Mobile Header (Shows Profile/Logout) */}
+            {/* Mobile Header (Shows Profile/Theme/Logout) */}
             <div className="md:hidden w-full bg-glass backdrop-blur-xl border-b border-divider p-4 flex justify-between items-center sticky top-0 z-40">
                 <window.Logo size="sm" showText={true} textClassName="text-lg" />
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleToggleTheme}
+                        className="p-2 rounded-xl bg-glass border border-divider text-yellow-500 dark:text-yellow-400 hover:text-main transition-colors flex items-center justify-center"
+                        title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+                        aria-label="Toggle theme"
+                    >
+                        <window.Icon name={isDark ? "moon" : "sun"} size={18} />
+                    </button>
                     <window.NotificationManager user={user} />
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-accent to-purple-500 flex items-center justify-center text-xs font-bold shadow-lg">
                         {user.displayName ? user.displayName[0].toUpperCase() : 'U'}
@@ -216,7 +234,25 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
 
                 <div className="mt-auto p-6 border-t border-divider mx-4 mb-4">
-                    <div className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-glass border border-divider">
+                    {/* Theme Mode Toggle Button */}
+                    <button
+                        onClick={handleToggleTheme}
+                        className="w-full mb-3 flex items-center justify-between px-3 py-2.5 rounded-xl bg-glass border border-divider hover:border-primary/40 text-main transition-all group cursor-pointer"
+                        title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+                        aria-label="Toggle theme"
+                    >
+                        <div className="flex items-center gap-2.5">
+                            <span className="p-1.5 rounded-lg bg-background border border-divider text-yellow-500 dark:text-yellow-400 group-hover:scale-110 transition-transform flex items-center justify-center shadow-sm">
+                                <window.Icon name={isDark ? "moon" : "sun"} size={16} />
+                            </span>
+                            <span className="text-xs font-semibold text-main">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+                        </div>
+                        <div className={`w-9 h-5 rounded-full p-0.5 transition-colors flex items-center ${isDark ? 'bg-primary justify-end' : 'bg-slate-300 justify-start'}`}>
+                            <div className="w-4 h-4 rounded-full bg-white shadow-md"></div>
+                        </div>
+                    </button>
+
+                    <div className="flex items-center gap-3 mb-3 p-2 rounded-xl bg-glass border border-divider">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-accent to-purple-500 flex items-center justify-center text-sm font-bold shadow-lg">
                             {user.displayName ? user.displayName[0].toUpperCase() : 'U'}
                         </div>
