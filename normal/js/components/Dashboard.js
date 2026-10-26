@@ -9,13 +9,28 @@ const Dashboard = ({ user, onLogout, theme, onToggleTheme }) => {
     const [totalUnreadCount, setTotalUnreadCount] = React.useState(0);
     const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
-    const isDark = (theme || window.currentTheme || (document.documentElement.classList.contains('dark') ? 'dark' : 'light')) === 'dark';
+    const [currentTheme, setCurrentTheme] = React.useState(theme || window.currentTheme || localStorage.getItem('theme') || 'dark');
+
+    React.useEffect(() => {
+        if (theme) setCurrentTheme(theme);
+    }, [theme]);
+
+    const isDark = currentTheme === 'dark';
 
     const handleToggleTheme = () => {
+        const next = isDark ? 'light' : 'dark';
+        setCurrentTheme(next);
+        if (next === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', next);
+        window.currentTheme = next;
         if (typeof onToggleTheme === 'function') {
-            onToggleTheme();
+            try { onToggleTheme(); } catch(e) {}
         } else if (typeof window.toggleTheme === 'function') {
-            window.toggleTheme();
+            try { window.toggleTheme(); } catch(e) {}
         }
     };
 
@@ -236,6 +251,7 @@ const Dashboard = ({ user, onLogout, theme, onToggleTheme }) => {
                 <div className="mt-auto p-6 border-t border-divider mx-4 mb-4">
                     {/* Theme Mode Toggle Button */}
                     <button
+                        id="theme-toggle-btn"
                         onClick={handleToggleTheme}
                         className="w-full mb-3 flex items-center justify-between px-3 py-2.5 rounded-xl bg-glass border border-divider hover:border-primary/40 text-main transition-all group cursor-pointer"
                         title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
@@ -386,11 +402,10 @@ const Dashboard = ({ user, onLogout, theme, onToggleTheme }) => {
                                     <div key={project.id}
                                         onClick={() => setSelectedProject(project)}
                                         className="bg-surface/40 backdrop-blur-xl border border-divider-strong rounded-3xl overflow-hidden hover:border-primary/50 transition-all duration-300 flex flex-col h-full cursor-pointer hover:scale-[1.02] group shadow-xl">
-                                        <div className="h-40 bg-gradient-to-br from-slate-800 to-slate-900 group-hover:from-primary/20 group-hover:to-secondary/20 transition-all relative p-6 flex flex-col justify-end">
-                                            <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-xs font-mono border border-divider-strong uppercase tracking-wider text-slate-300">
+                                        <div className="h-36 bg-gradient-to-br from-purple-100/50 via-slate-100/60 to-blue-100/50 dark:from-slate-800 dark:to-slate-900 border-b border-divider group-hover:from-primary/10 group-hover:to-secondary/10 transition-all relative p-6 flex flex-col justify-end">
+                                            <div className="absolute top-4 right-4 bg-surface/90 dark:bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-xs font-mono border border-divider-strong uppercase tracking-wider text-muted dark:text-slate-300 shadow-sm">
                                                 {project.status || 'Active'}
                                             </div>
-
                                         </div>
                                         <div className="p-6 flex-1 flex flex-col">
                                             <h4 className="text-xl font-bold mb-3 text-main group-hover:text-primary transition-colors leading-tight">{project.title}</h4>
