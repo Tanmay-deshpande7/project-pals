@@ -63,69 +63,39 @@ const SHARD_CONFIGS = {
     }
 };
 
-// Global active database pointer
-window.activeShardDb = null;
-window.userShardId = null;
+// Initialize all Shard Firestore Databases
+const shardDbs = {
+    master: masterDb
+};
 
-// Dynamic User Shard Connector
-window.initializeUserShard = async (uid) => {
+Object.entries(SHARD_CONFIGS).forEach(([shardId, config]) => {
     try {
-        console.log(`Connecting user ${uid} to shard...`);
-        // 1. Fetch user document from Master Registry
+        const appName = `shardApp_${shardId}`;
+        let shardApp = firebase.apps.find(app => app.name === appName);
+        if (!shardApp) {
+            shardApp = firebase.initializeApp(config, appName);
+        }
+        shardDbs[shardId] = shardApp.firestore();
+    } catch (e) {
+        console.error(`Failed to initialize ${shardId}:`, e);
+    }
+});
+
+// Primary active database pointer: Shared Master Database for cross-portal event visibility
+window.activeShardDb = masterDb;
+window.userShardId = 'master';
+window.shardDbs = shardDbs;
+
+// Dynamic User Connector
+window.initializeUserShard = async (uid) => {
+    window.userShardId = 'master';
+    window.activeShardDb = masterDb;
+    try {
         const userDocRef = masterDb.collection('users').doc(uid);
-        const userDoc = await userDocRef.get();
-        let shardId = userDoc.exists ? userDoc.data().shardId : null;
-
-        if (!shardId) {
-            // New user registration. Check if user is an admin.
-            const adminSnap = await masterDb.collection('admins')
-                .where('email', '==', auth.currentUser?.email || '')
-                .limit(1)
-                .get();
-            
-            if (!adminSnap.empty) {
-                shardId = 'master'; // Admins default to master database
-            } else {
-                // Round-Robin or random distribution across shards 1 to 4
-                const shardIds = ["shard-1", "shard-2", "shard-3", "shard-4"];
-                shardId = shardIds[Math.floor(Math.random() * shardIds.length)];
-            }
-
-            // Save the selection in the Master Registry
-            await userDocRef.set({
-                shardId: shardId
-            }, { merge: true });
-        }
-
-        window.userShardId = shardId;
-        console.log(`User ${uid} mapped to Shard: ${shardId}`);
-
-        // 2. Resolve database instance for the shard
-        let shardDb;
-        if (shardId === 'master') {
-            shardDb = masterDb;
-        } else {
-            const appName = `shardApp_${shardId}`;
-            let shardApp = firebase.apps.find(app => app.name === appName);
-            if (!shardApp) {
-                shardApp = firebase.initializeApp(SHARD_CONFIGS[shardId], appName);
-                // Enable Offline Caching for the shard database
-                try {
-                    await shardApp.firestore().enablePersistence({ synchronizeTabs: true });
-                    console.log(`Offline persistence enabled for shard ${shardId}`);
-                } catch (err) {
-                    console.warn(`Shard persistence warning for ${shardId}:`, err.message);
-                }
-            }
-            shardDb = shardApp.firestore();
-        }
-
-        window.activeShardDb = shardDb;
-        console.log(`Successfully connected active database shard: ${shardId}`);
+        await userDocRef.set({ shardId: 'master' }, { merge: true });
+        console.log(`Events user ${uid} connected to Shared Master Database.`);
     } catch (err) {
-        console.error("Failed to initialize user shard database, falling back to master:", err);
-        window.activeShardDb = masterDb;
-        window.userShardId = 'master';
+        console.warn("User shard sync:", err);
     }
 };
 
@@ -171,14 +141,8 @@ class ProxyBatch {
     }
 }
 
-// Collections partition config
-const heavyCollections = new Set(['projects', 'events', 'applications', 'threads', 'messages', 'requests']);
-
+// All active event operations resolve to the shared master database
 function getDbForCollection(collectionPath) {
-    const rootCollection = collectionPath.split('/')[0];
-    if (heavyCollections.has(rootCollection)) {
-        return window.activeShardDb || masterDb;
-    }
     return masterDb;
 }
 
@@ -218,8 +182,10 @@ if (firebase.analytics) {
 }
 
 // Make services available globally for app.jsx
+window.firebase = firebase;
 window.auth = auth;
 window.db = dbProxy;
-window.masterDb = masterDb; // In case we need raw master DB access (like in admin dashboard)
+window.masterDb = masterDb;
+window.secureFieldValue = firebase.firestore.FieldValue;
 
-console.log("Firebase initialized with ProjectPals sharding load balancer");
+console.log("Firebase initialized for Events Portal on Shared Master Database");

@@ -14,21 +14,83 @@ const Dashboard = ({ user, onLogout }) => {
         if (window.lucide) window.lucide.createIcons();
     }, [projects]);
 
+    // Keep selectedProject in sync when projects collection updates
     React.useEffect(() => {
-        const unsubscribe = window.db.collection('projects')
-            .orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
-                const fetchedProjects = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setProjects(fetchedProjects);
+        if (selectedProject) {
+            const updated = projects.find(p => p.id === selectedProject.id);
+            if (updated) setSelectedProject(updated);
+        }
+    }, [projects]);
+
+    const formatProjectDate = (createdAt) => {
+        if (!createdAt) return 'Recently';
+        if (createdAt.seconds) return new Date(createdAt.seconds * 1000).toLocaleDateString();
+        if (typeof createdAt.toDate === 'function') return createdAt.toDate().toLocaleDateString();
+        if (createdAt instanceof Date) return createdAt.toLocaleDateString();
+        if (typeof createdAt === 'number' || typeof createdAt === 'string') {
+            const d = new Date(createdAt);
+            return isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString();
+        }
+        return 'Recently';
+    };
+
+    React.useEffect(() => {
+        if (!window.db) return;
+
+        // If multiple shard connectors exist, watch all databases in parallel so all projects across shards appear
+        if (window.shardDbs && Object.keys(window.shardDbs).length > 1) {
+            const shardProjectsData = {};
+            const unsubs = [];
+
+            const updateCombinedProjects = () => {
+                const all = [];
+                const seenIds = new Set();
+                Object.values(shardProjectsData).forEach(list => {
+                    list.forEach(p => {
+                        if (!seenIds.has(p.id)) {
+                            seenIds.add(p.id);
+                            all.push(p);
+                        }
+                    });
+                });
+                all.sort((a, b) => {
+                    const timeA = a.createdAt?.seconds || (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0) || (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
+                    const timeB = b.createdAt?.seconds || (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0) || (b.createdAt instanceof Date ? b.createdAt.getTime() : 0);
+                    return timeB - timeA;
+                });
+                setProjects(all);
                 setLoading(false);
-            }, err => {
-                console.error("Error fetching projects:", err);
-                setLoading(false);
+            };
+
+            Object.entries(window.shardDbs).forEach(([name, dbInst]) => {
+                try {
+                    const unsub = dbInst.collection('projects').onSnapshot(snap => {
+                        shardProjectsData[name] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        updateCombinedProjects();
+                    }, err => {
+                        console.warn(`Watch projects on ${name}:`, err.message);
+                    });
+                    unsubs.push(unsub);
+                } catch(e) {}
             });
-        return () => unsubscribe();
+
+            return () => unsubs.forEach(u => u());
+        } else {
+            const unsubscribe = window.db.collection('projects')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    const fetchedProjects = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    setProjects(fetchedProjects);
+                    setLoading(false);
+                }, err => {
+                    console.error("Error fetching projects:", err);
+                    setLoading(false);
+                });
+            return () => unsubscribe();
+        }
     }, []);
 
     React.useEffect(() => {
@@ -300,7 +362,7 @@ const Dashboard = ({ user, onLogout }) => {
 
                                             <div className="pt-4 border-t border-divider flex justify-between items-center text-xs text-muted/70">
                                                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary"></span> {project.authorName}</span>
-                                                <span>{new Date(project.createdAt.seconds * 1000).toLocaleDateString()}</span>
+                                                <span>{formatProjectDate(project.createdAt)}</span>
                                             </div>
                                         </div>
                                     </div>

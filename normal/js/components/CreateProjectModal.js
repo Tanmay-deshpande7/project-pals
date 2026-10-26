@@ -47,7 +47,7 @@ const CreateProjectModal = ({ isOpen, onClose, user }) => {
                 authorId: user.uid,
                 authorName: user.displayName || 'Anonymous',
                 participants: preAssignedParticipants,
-                createdAt: new Date(),
+                createdAt: window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date(),
                 status: 'active'
             });
             onClose();
