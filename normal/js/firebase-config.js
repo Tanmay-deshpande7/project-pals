@@ -1,4 +1,4 @@
-// Firebase Configuration - Master Database
+// Firebase Configuration — Auth only. All data goes through /api/collaboration.
 const firebaseConfig = {
     apiKey: "AIzaSyCF9kGEKBk6L5btxclVsfyeHA3TNYGw_0U",
     authDomain: "projectpals-66223.firebaseapp.com",
@@ -19,14 +19,15 @@ window.masterDb = dataClient.masterDb;
 window.shardDbs = dataClient.shardDbs;
 window.secureFieldValue = dataClient.secureFieldValue;
 window.secureApi = dataClient.requestApi;
-window.getPortalAccess = () => dataClient.requestApi({kind: 'access'});
+window.getPortalAccess = () => dataClient.requestApi({ kind: 'access' });
+
 // Earlier versions wrote origin-local IndexedDB caches. Remove only this app's
 // Firestore databases; ask the user to close old tabs if a connection blocks cleanup.
 const cacheCleanup = (async () => {
     if (!window.indexedDB || !window.indexedDB.databases) return;
     const projects = ['projectpals-66223', 'projectpals-shard-1', 'projectpals-shard-2', 'projectpals-shard-3', 'projectpals-shard-4'];
     const databases = await window.indexedDB.databases();
-    for (const {name} of databases) if (name && name.startsWith('firestore/') && projects.some(id => name.includes('/' + id + '/'))) {
+    for (const { name } of databases) if (name && name.startsWith('firestore/') && projects.some(id => name.includes('/' + id + '/'))) {
         await new Promise((resolve, reject) => {
             const request = window.indexedDB.deleteDatabase(name);
             request.onsuccess = resolve;
@@ -36,9 +37,12 @@ const cacheCleanup = (async () => {
     }
 })();
 cacheCleanup.catch(() => {}); // Handled by each portal's authentication bootstrap.
+
 window.initializeUserShard = async () => {
     await cacheCleanup;
     const access = await dataClient.initializeUserShard();
     window.userShardId = access.shard;
     return access;
 };
+
+console.log("ProjectPals secure data client initialized.");

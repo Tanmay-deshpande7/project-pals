@@ -12,16 +12,10 @@ const AuthForm = ({ type, onSwitch, onLoginSuccess }) => {
         try {
             if (type === 'signup') {
                 const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
-                // Update profile with name
+                // Update Auth profile with display name
                 await userCredential.user.updateProfile({ displayName: name });
-                const shortId = userCredential.user.uid.substring(0, 8).toUpperCase();
-                // Create user document in Firestore (optional but good practice)
-                await window.db.collection('users').doc(userCredential.user.uid).set({
-                    displayName: name,
-                    email: userCredential.user.email,
-                    networkId: shortId,
-                    // Creation time and shard are assigned by the server.
-                }, { merge: true });
+                // User document is created server-side by the gateway bootstrap
+                // (initializeUserShard runs in app.jsx after onAuthStateChanged fires)
             } else {
                 await window.auth.signInWithEmailAndPassword(email, password);
             }
@@ -38,19 +32,9 @@ const AuthForm = ({ type, onSwitch, onLoginSuccess }) => {
         setLoading(true);
         try {
             const provider = new window.firebase.auth.GoogleAuthProvider();
-            const result = await window.auth.signInWithPopup(provider);
-            
-            // If new user, create their document in firestore (optional check)
-            const userDoc = await window.db.collection('users').doc(result.user.uid).get();
-            if (!userDoc.exists) {
-                const shortId = result.user.uid.substring(0, 8).toUpperCase();
-                await window.db.collection('users').doc(result.user.uid).set({
-                    displayName: result.user.displayName,
-                    email: result.user.email,
-                    networkId: shortId,
-                    // Creation time and shard are assigned by the server.
-                }, { merge: true });
-            }
+            await window.auth.signInWithPopup(provider);
+            // User document is created/updated server-side by the gateway bootstrap
+            // (initializeUserShard runs in app.jsx after onAuthStateChanged fires)
             onLoginSuccess();
         } catch (err) {
             setError(err.message);

@@ -1,0 +1,17 @@
+{
+  "name": "projectpals-normal",
+  "version": "1.0.0",
+  "description": "Project Pals Main Website (Normal)",
+  "scripts": {
+    "build:js": "babel js --out-dir dist/js",
+    "build:css": "tailwindcss -i style.css -o dist/style.css --minify",
+    "build": "npm run build:js && npm run build:css",
+    "dev": "npm run build"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.23.9",
+    "@babel/core": "^7.23.9",
+    "@babel/preset-react": "^7.23.3",
+    "tailwindcss": "^3.4.1"
+  }
+}

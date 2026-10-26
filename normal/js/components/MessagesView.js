@@ -19,8 +19,8 @@ const MessagesView = ({ user, onOpenChat }) => {
                     try {
                         const projectDoc = await window.db.collection('projects').doc(projectId).get();
                         if (!projectDoc.exists) {
-                            // Project deleted — silently clean up this orphaned thread
-                            window.db.collection('threads').doc(thread.id).delete().catch(() => {});
+                            // Project deleted — hide this thread locally.
+                            // Server-side cascade cleanup handles deletion when project is removed.
                             return null; // mark for removal
                         }
                     } catch(e) {

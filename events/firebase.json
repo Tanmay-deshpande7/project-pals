@@ -1,0 +1,22 @@
+{
+  "hosting": {
+    "target": "events",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "js/**",
+      "package*.json",
+      "README.md",
+      "tailwind.config.js",
+      "babel.config.json"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

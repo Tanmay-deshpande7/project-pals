@@ -1,0 +1,33 @@
+{
+  "hosting": {
+    "target": "main",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "js/**",
+      "package*.json",
+      "README.md",
+      "tailwind.config.js",
+      "babel.config.json"
+    ],
+    "headers": [
+      {
+        "source": "**/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
